@@ -12,12 +12,12 @@ O PetCare é uma aplicação mobile desenvolvida para auxiliar tutores de pets n
 
 | Funcionalidade | Descrição |
 |----------------|-----------|
+| Cadastrar Tutor | Registro de novos usuários com nome, e-mail e senha |
 | Cadastrar Pet | Registro de novos animais com nome, espécie, raça e data de nascimento |
-| Visualizar Dashboard | Painel inicial com resumo dos pets e próximos eventos |
+| Editar Perfil do Pet | Atualização das informações cadastrais do animal |
 | Adicionar Evento | Registro de vacinas, consultas, vermifugos e medicamentos |
 | Visualizar Histórico | Listagem completa de todos os eventos de um pet |
-| Editar Perfil do Pet | Atualização das informações cadastrais do animal |
-| Remover Pet | Exclusão de pet e seus eventos associados |
+| Visualizar Dashboard | Painel inicial com resumo dos pets e próximos eventos |
 
 ---
 
@@ -49,6 +49,8 @@ Foram desenvolvidas 6 interfaces no Figma, com navegação funcional entre todas
 4. Perfil do Pet
 5. Adicionar Evento
 6. Calendário de Eventos
+
+![Prototipagem no Figma]()
 
 ---
 
