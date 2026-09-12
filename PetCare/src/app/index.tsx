@@ -1,5 +1,5 @@
-import { RegisterTutor } from "../screens/RegisterTutor";
+import { Dashboard } from "../screens/Dashboard";
 
 export default function Home() {
-  return <RegisterTutor />;
+  return <Dashboard />;
 }
