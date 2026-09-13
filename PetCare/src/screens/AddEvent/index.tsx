@@ -1,33 +1,49 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function AddEvent({ navigation }: any) {
-  const [tipo, setTipo] = useState('Vacina');
+  const [tipo, setTipo] = useState('Vacina'); 
   const [data, setData] = useState('');
   const [obs, setObs] = useState('');
+  const opcoes = ['Vacina', 'Consulta', 'Vermífugo', 'Medicamento', 'Exame'];
 
-  const tiposDisponiveis = ['Vacina', 'Consulta', 'Vermífugo', 'Medicamento', 'Exame'];
+function formatarData(texto: string) {
+  const apenasNumeros = texto.replace(/\D/g, '');
+  if (apenasNumeros.length <= 2) {
+    return apenasNumeros;
+  }
+  if (apenasNumeros.length <= 4) {
+    return `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2)}`;
+  }
+  return `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4, 8)}`;
+}
 
   return (
-    <SafeAreaView className="flex-1 bg-white justify-between">
-      {/* Topo Cinza */}
-      <View className="w-full bg-neutral-300 h-20 px-6 flex-row justify-end items-center">
-        <View className="w-12 h-12 rounded-full bg-neutral-500" />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.avatar} />
       </View>
 
-      <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
-        <Text className="text-xl font-mono text-neutral-900 mb-6 font-bold">
-          Adicionar novo evento:
-        </Text>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.title}>Adicionar novo evento:</Text>
 
-        <Text className="text-base font-mono text-neutral-900 mb-2">Tipo:</Text>
-        <View className="w-full bg-neutral-300 rounded-2xl p-4 mb-4">
-          <Text className="font-mono text-neutral-900 font-bold mb-3">{tipo}</Text>
-          <View className="bg-neutral-500 rounded-lg p-3 gap-1">
-            {tiposDisponiveis.map((opcao) => (
-              <TouchableOpacity key={opcao} onPress={() => setTipo(opcao)}>
-                <Text className={`font-mono text-sm ${tipo === opcao ? 'text-white font-bold' : 'text-neutral-300'}`}>
+        <Text style={styles.fieldLabel}>Tipo:</Text>
+        <View style={styles.typeCard}>
+          <Text style={styles.selectedTypeText}>{tipo}</Text>
+          
+          <View style={styles.typeList}>
+            {opcoes.map((opcao) => (
+              <TouchableOpacity 
+                key={opcao} 
+                onPress={() => setTipo(opcao)}
+                style={styles.touchableOption}
+              >
+
+                <Text style={[
+                  styles.typeItem, 
+                  tipo === opcao && styles.typeItemActive
+                ]}>
                   {opcao}
                 </Text>
               </TouchableOpacity>
@@ -35,48 +51,73 @@ export function AddEvent({ navigation }: any) {
           </View>
         </View>
 
-        <Text className="text-base font-mono text-neutral-900 mb-2">Data:</Text>
+        <Text style={styles.fieldLabel}>Data:</Text>
         <TextInput
-          value={data}
-          onChangeText={setData}
-          placeholder="dd/mm/aaaa"
-          placeholderTextColor="#666"
-          className="w-full bg-neutral-300 h-12 rounded-full px-5 text-neutral-900 font-mono mb-4"
+            value={data}
+            onChangeText={(texto) => setData(formatarData(texto))}
+            keyboardType="numeric"
+            maxLength={10}
+            placeholder="dd/mm/aaaa"
+            placeholderTextColor="#737373"
+            style={styles.pillInput}
         />
 
-        <Text className="text-base font-mono text-neutral-900 mb-2">Observações:</Text>
+        <Text style={styles.fieldLabel}>Observações:</Text>
         <TextInput
           value={obs}
           onChangeText={setObs}
           placeholder="Adicione observações"
-          placeholderTextColor="#666"
-          multiline
-          numberOfLines={3}
-          className="w-full bg-neutral-300 h-20 rounded-2xl p-4 text-neutral-900 font-mono mb-6"
+          placeholderTextColor="#737373"
+          style={styles.pillInput}
         />
 
-        <View className="items-center mb-6">
+        <View style={styles.buttonWrapper}>
           <TouchableOpacity
+            activeOpacity={0.8}
             onPress={() => navigation?.goBack()}
-            className="bg-green-700 px-8 py-3 rounded-full"
+            style={styles.submitButton}
           >
-            <Text className="text-white font-mono text-sm font-bold">
-              Criar evento
-            </Text>
+            <Text style={styles.submitButtonText}>Criar evento</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      <View className="w-full h-20 bg-neutral-300 flex-row justify-around items-center">
-        <TouchableOpacity onPress={() => navigation?.navigate('EventList')} className="items-center">
-          <View className="w-10 h-10 rounded-full bg-neutral-500 mb-1" />
-          <Text className="text-xs font-mono text-neutral-800">histórico</Text>
+      {/* Rodapé Fixo */}
+      <View style={styles.bottomBar}>
+        <TouchableOpacity onPress={() => navigation?.navigate('EventList')} style={styles.bottomTab}>
+          <View style={styles.tabIconCircle} />
+          <Text style={styles.tabLabel}>histórico</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard')} className="items-center">
-          <View className="w-10 h-10 rounded-full bg-neutral-500 mb-1" />
-          <Text className="text-xs font-mono text-neutral-800">pets</Text>
+        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard')} style={styles.bottomTab}>
+          <View style={styles.tabIconCircle} />
+          <Text style={styles.tabLabel}>pets</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#ffffff', justifyContent: 'space-between' },
+  header: { width: '100%', height: 70, backgroundColor: '#d4d4d4', paddingHorizontal: 24, justifyContent: 'center', alignItems: 'flex-end' },
+  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#737373' },
+  content: { flex: 1, paddingHorizontal: 24, paddingTop: 16 },
+  title: { fontSize: 20, fontFamily: 'monospace', color: '#000000', marginBottom: 20 },
+  fieldLabel: { fontFamily: 'monospace', fontSize: 14, color: '#171717', marginBottom: 8 },
+  
+  typeCard: { width: '100%', backgroundColor: '#d4d4d4', borderRadius: 20, padding: 12, marginBottom: 16 },
+  selectedTypeText: { fontFamily: 'monospace', fontSize: 14, fontWeight: 'bold', color: '#000000', marginBottom: 8, paddingHorizontal: 4 },
+  typeList: { backgroundColor: '#8c8c8c', borderRadius: 8, padding: 12, gap: 8 },
+  touchableOption: { paddingVertical: 2 },
+  typeItem: { color: '#d4d4d4', fontFamily: 'monospace', fontSize: 13 },
+  typeItemActive: { color: '#ffffff', fontWeight: 'bold' }, 
+  
+  pillInput: { width: '100%', backgroundColor: '#d4d4d4', height: 42, borderRadius: 21, paddingHorizontal: 16, fontFamily: 'monospace', fontSize: 13, color: '#000000', marginBottom: 16 },
+  buttonWrapper: { alignItems: 'center', marginTop: 16, marginBottom: 24 },
+  submitButton: { backgroundColor: '#15803d', paddingHorizontal: 26, paddingVertical: 10, borderRadius: 20 },
+  submitButtonText: { color: '#ffffff', fontFamily: 'monospace', fontSize: 13, fontWeight: 'bold' },
+  bottomBar: { width: '100%', height: 75, backgroundColor: '#d4d4d4', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
+  bottomTab: { alignItems: 'center' },
+  tabIconCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#737373', marginBottom: 4 },
+  tabLabel: { fontSize: 11, fontFamily: 'monospace', color: '#171717' },
+});

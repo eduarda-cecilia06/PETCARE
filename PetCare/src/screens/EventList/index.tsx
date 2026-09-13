@@ -1,67 +1,156 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function EventList({ navigation }: any) {
-  const [filtro, setFiltro] = useState('Todos');
-
   const eventos = [
-    { id: '1', pet: 'Pipoca', tipo: 'tomar vermífugo', data: '20/06' },
-    { id: '2', pet: 'Kadule', tipo: 'comprimido de verme', data: '03/09' },
-    { id: '3', pet: 'Pipoca', tipo: 'vacina raiva', data: '15/10' },
+    { id: '1', pet: 'Pipoca', acao: 'tomar vermífugo', data: '20/06' },
+    { id: '2', pet: 'Kadule', acao: 'comprimido de verme', data: '03/09' },
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-white justify-between">
-      {/* Topo Cinza com Avatar */}
-      <View className="w-full bg-neutral-300 h-20 px-6 flex-row justify-end items-center">
-        <View className="w-12 h-12 rounded-full bg-neutral-500" />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.avatar} />
       </View>
 
-      <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
-        <Text className="text-2xl font-mono text-center text-neutral-900 mb-6 font-bold">
-          Histórico de eventos:
-        </Text>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.title}>Histórico de eventos:</Text>
 
         {eventos.map((item) => (
-          <View
-            key={item.id}
-            className="w-full bg-neutral-300 rounded-md p-4 flex-row items-center justify-between mb-3"
-          >
-            <Text className="text-base font-mono font-bold text-neutral-900 w-1/4">
-              {item.pet}
-            </Text>
-            <Text className="text-xs font-mono text-neutral-800 flex-1 text-center px-1">
-              {item.tipo}
-            </Text>
-            <Text className="text-xs font-mono text-neutral-700 w-1/4 text-right">
-              {item.data}
-            </Text>
+          <View key={item.id} style={styles.eventRow}>
+            <Text style={styles.petName}>{item.pet}</Text>
+            <Text style={styles.eventAction}>{item.acao}</Text>
+            <Text style={styles.eventDate}>{item.data}</Text>
           </View>
         ))}
 
-        <View className="items-center mt-6 mb-6">
+        <View style={styles.buttonWrapper}>
           <TouchableOpacity
+            activeOpacity={0.8}
             onPress={() => navigation?.navigate('AddEvent')}
-            className="bg-green-700 px-6 py-2.5 rounded-full"
+            style={styles.addButton}
           >
-            <Text className="text-white font-mono text-xs font-bold">
-              Adicionar evento
-            </Text>
+            <Text style={styles.addButtonText}>Adicionar evento</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      <View className="w-full h-20 bg-neutral-300 flex-row justify-around items-center">
-        <TouchableOpacity onPress={() => navigation?.navigate('EventList')} className="items-center">
-          <View className="w-10 h-10 rounded-full bg-neutral-500 mb-1" />
-          <Text className="text-xs font-mono text-neutral-800">histórico</Text>
+      <View style={styles.bottomBar}>
+        <TouchableOpacity onPress={() => navigation?.navigate('EventList')} style={styles.bottomTab}>
+          <View style={styles.tabIconCircle} />
+          <Text style={styles.tabLabel}>histórico</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard')} className="items-center">
-          <View className="w-10 h-10 rounded-full bg-neutral-500 mb-1" />
-          <Text className="text-xs font-mono text-neutral-800">pets</Text>
+        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard')} style={styles.bottomTab}>
+          <View style={styles.tabIconCircle} />
+          <Text style={styles.tabLabel}>pets</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    justifyContent: 'space-between',
+  },
+  header: {
+    width: '100%',
+    height: 70,
+    backgroundColor: '#d4d4d4',
+    paddingHorizontal: 24,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#737373',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+  },
+  title: {
+    fontSize: 20,
+    fontFamily: 'monospace',
+    color: '#000000',
+    marginBottom: 20,
+  },
+  eventRow: {
+    width: '100%',
+    backgroundColor: '#d4d4d4',
+    borderRadius: 6,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  petName: {
+    fontSize: 14,
+    fontFamily: 'monospace',
+    fontWeight: 'bold',
+    color: '#000000',
+    width: '28%',
+  },
+  eventAction: {
+    fontSize: 11,
+    fontFamily: 'monospace',
+    color: '#171717',
+    flex: 1,
+    textAlign: 'center',
+  },
+  eventDate: {
+    fontSize: 11,
+    fontFamily: 'monospace',
+    color: '#404040',
+    width: '25%',
+    textAlign: 'right',
+  },
+  buttonWrapper: {
+    alignItems: 'flex-start',
+    marginTop: 12,
+    marginBottom: 24,
+  },
+  addButton: {
+    backgroundColor: '#15803d',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  addButtonText: {
+    color: '#ffffff',
+    fontFamily: 'monospace',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  bottomBar: {
+    width: '100%',
+    height: 75,
+    backgroundColor: '#d4d4d4',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  bottomTab: {
+    alignItems: 'center',
+  },
+  tabIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#737373',
+    marginBottom: 4,
+  },
+  tabLabel: {
+    fontSize: 11,
+    fontFamily: 'monospace',
+    color: '#171717',
+  },
+});

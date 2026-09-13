@@ -1,121 +1,125 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function PetForm({ navigation }: any) {
   const [nome, setNome] = useState('Pipoca');
   const [especie, setEspecie] = useState('xxx');
   const [raca, setRaca] = useState('xxx');
-  const [dataNascimento, setDataNascimento] = useState('dd/mm/aaaa');
+  const [dataNasc, setDataNasc] = useState('dd/mm/aaaa');
   const [idade, setIdade] = useState('00');
 
   return (
-    <SafeAreaView className="flex-1 bg-white justify-between">
-      <View className="w-full bg-neutral-300 h-20 px-6 flex-row justify-end items-center">
-        <View className="w-12 h-12 rounded-full bg-neutral-500" />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.avatar} />
       </View>
 
-      <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
-        <Text className="text-2xl font-mono text-center text-neutral-900 mb-6">
-          Seus pets
-        </Text>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.title}>Seus pets</Text>
 
-        <View className="w-full bg-neutral-300 rounded-lg p-6 mb-6">
-          <View className="flex-row items-center mb-6">
-            <TouchableOpacity className="w-24 h-24 bg-neutral-500 rounded-sm justify-end p-1 mr-4">
-              <Text className="text-[10px] font-mono text-neutral-200">
-                mudar foto
-              </Text>
+        <View style={styles.card}>
+          <View style={styles.topRow}>
+            <TouchableOpacity style={styles.photoBox}>
+              <Text style={styles.photoText}>mudar foto</Text>
             </TouchableOpacity>
 
-            <View className="flex-1">
+            <View style={styles.nameInputWrapper}>
               <TextInput
                 value={nome}
                 onChangeText={setNome}
-                placeholder="Nome"
-                className="bg-neutral-400 h-9 rounded-full px-4 text-neutral-900 font-mono text-sm"
+                style={styles.pillInput}
               />
             </View>
           </View>
 
-          <View className="gap-3">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-base font-mono text-neutral-800">
-                Espécie:
-              </Text>
+          <View style={styles.fieldsContainer}>
+            <View style={styles.fieldRow}>
+              <Text style={styles.label}>Espécie:</Text>
               <TextInput
                 value={especie}
                 onChangeText={setEspecie}
-                className="w-32 bg-neutral-400 h-8 rounded-full px-4 text-neutral-900 font-mono text-xs text-center"
+                style={styles.shortPillInput}
               />
             </View>
 
-            <View className="flex-row items-center justify-between">
-              <Text className="text-base font-mono text-neutral-800">
-                Raça:
-              </Text>
+            <View style={styles.fieldRow}>
+              <Text style={styles.label}>Raça:</Text>
               <TextInput
                 value={raca}
                 onChangeText={setRaca}
-                className="w-32 bg-neutral-400 h-8 rounded-full px-4 text-neutral-900 font-mono text-xs text-center"
+                style={styles.shortPillInput}
               />
             </View>
 
-            <View className="flex-row items-center justify-between">
-              <Text className="text-sm font-mono text-neutral-800">
-                Data de nascimento:
-              </Text>
+            <View style={styles.fieldRow}>
+              <Text style={styles.label}>Data de nascimento:</Text>
               <TextInput
-                value={dataNascimento}
-                onChangeText={setDataNascimento}
-                className="w-32 bg-neutral-400 h-8 rounded-full px-4 text-neutral-900 font-mono text-xs text-center"
+                value={dataNasc}
+                onChangeText={setDataNasc}
+                style={styles.datePillInput}
               />
             </View>
 
-            <View className="flex-row items-center justify-between">
-              <Text className="text-base font-mono text-neutral-800">
-                Idade:
-              </Text>
+            <View style={styles.fieldRow}>
+              <Text style={styles.label}>Idade:</Text>
               <TextInput
                 value={idade}
                 onChangeText={setIdade}
                 keyboardType="numeric"
-                className="w-32 bg-neutral-400 h-8 rounded-full px-4 text-neutral-900 font-mono text-xs text-center"
+                style={styles.shortPillInput}
               />
             </View>
           </View>
 
-          <View className="items-center mt-6">
+          <View style={styles.buttonWrapper}>
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => navigation?.goBack()}
-              className="bg-green-700 px-6 py-2 rounded-full"
+              style={styles.saveButton}
             >
-              <Text className="text-white font-mono text-sm font-bold">
-                salvar pet
-              </Text>
+              <Text style={styles.saveButtonText}>salvar pet</Text>
             </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
 
-      <View className="w-full h-20 bg-neutral-300 flex-row justify-around items-center">
-        <TouchableOpacity
-          onPress={() => navigation?.navigate('EventList')}
-          className="items-center"
-        >
-          <View className="w-10 h-10 rounded-full bg-neutral-500 mb-1" />
-          <Text className="text-xs font-mono text-neutral-800">histórico</Text>
+      <View style={styles.bottomBar}>
+        <TouchableOpacity onPress={() => navigation?.navigate('EventList')} style={styles.bottomTab}>
+          <View style={styles.tabIconCircle} />
+          <Text style={styles.tabLabel}>histórico</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => navigation?.navigate('Dashboard')}
-          className="items-center"
-        >
-          <View className="w-10 h-10 rounded-full bg-neutral-500 mb-1" />
-          <Text className="text-xs font-mono text-neutral-800">pets</Text>
+        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard')} style={styles.bottomTab}>
+          <View style={styles.tabIconCircle} />
+          <Text style={styles.tabLabel}>pets</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#ffffff', justifyContent: 'space-between' },
+  header: { width: '100%', height: 70, backgroundColor: '#d4d4d4', paddingHorizontal: 24, justifyContent: 'center', alignItems: 'flex-end' },
+  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#737373' },
+  content: { flex: 1, paddingHorizontal: 24, paddingTop: 16 },
+  title: { fontSize: 22, fontFamily: 'monospace', textAlign: 'center', color: '#000000', marginBottom: 20 },
+  card: { width: '100%', backgroundColor: '#d4d4d4', borderRadius: 8, padding: 18, marginBottom: 20 },
+  topRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  photoBox: { width: 75, height: 75, backgroundColor: '#737373', borderRadius: 4, justifyContent: 'flex-end', padding: 4, marginRight: 16 },
+  photoText: { fontSize: 9, fontFamily: 'monospace', color: '#e5e5e5' },
+  nameInputWrapper: { flex: 1 },
+  pillInput: { backgroundColor: '#a3a3a3', height: 36, borderRadius: 18, paddingHorizontal: 14, fontFamily: 'monospace', fontSize: 13, color: '#000000' },
+  fieldsContainer: { gap: 12 },
+  fieldRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  label: { fontFamily: 'monospace', fontSize: 13, color: '#171717' },
+  shortPillInput: { width: 90, backgroundColor: '#a3a3a3', height: 32, borderRadius: 16, textAlign: 'center', fontFamily: 'monospace', fontSize: 12, color: '#000000' },
+  datePillInput: { width: 110, backgroundColor: '#a3a3a3', height: 32, borderRadius: 16, textAlign: 'center', fontFamily: 'monospace', fontSize: 12, color: '#000000' },
+  buttonWrapper: { alignItems: 'center', marginTop: 24 },
+  saveButton: { backgroundColor: '#15803d', paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20 },
+  saveButtonText: { color: '#ffffff', fontFamily: 'monospace', fontSize: 13, fontWeight: 'bold' },
+  bottomBar: { width: '100%', height: 75, backgroundColor: '#d4d4d4', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
+  bottomTab: { alignItems: 'center' },
+  tabIconCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#737373', marginBottom: 4 },
+  tabLabel: { fontSize: 11, fontFamily: 'monospace', color: '#171717' },
+});
