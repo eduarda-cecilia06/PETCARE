@@ -6,8 +6,37 @@ export function PetForm({ navigation }: any) {
   const [nome, setNome] = useState('Pipoca');
   const [especie, setEspecie] = useState('xxx');
   const [raca, setRaca] = useState('xxx');
-  const [dataNasc, setDataNasc] = useState('dd/mm/aaaa');
-  const [idade, setIdade] = useState('00');
+  const [dataNasc, setDataNasc] = useState('');
+  const [idade, setIdade] = useState('');
+
+  
+  function formatarData(texto: string) {
+    const apenasNumeros = texto.replace(/\D/g, '');
+
+    if (apenasNumeros.length <= 2) {
+      return apenasNumeros;
+    }
+    if (apenasNumeros.length <= 4) {
+      return `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2)}`;
+    }
+    return `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4, 8)}`;
+  }
+
+  function handleDataChange(texto: string) {
+    const dataFormatada = formatarData(texto);
+    setDataNasc(dataFormatada);
+
+    if (dataFormatada.length === 10) {
+      const partes = dataFormatada.split('/');
+      const anoNasc = parseInt(partes[2], 10);
+      const anoAtual = new Date().getFullYear();
+      const calculoIdade = anoAtual - anoNasc;
+
+      if (calculoIdade >= 0 && calculoIdade < 50) {
+        setIdade(String(calculoIdade));
+      }
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -56,7 +85,11 @@ export function PetForm({ navigation }: any) {
               <Text style={styles.label}>Data de nascimento:</Text>
               <TextInput
                 value={dataNasc}
-                onChangeText={setDataNasc}
+                onChangeText={handleDataChange}
+                placeholder="dd/mm/aaaa"
+                placeholderTextColor="#666666"
+                keyboardType="numeric"
+                maxLength={10}
                 style={styles.datePillInput}
               />
             </View>
@@ -66,7 +99,10 @@ export function PetForm({ navigation }: any) {
               <TextInput
                 value={idade}
                 onChangeText={setIdade}
+                placeholder="00"
+                placeholderTextColor="#666666"
                 keyboardType="numeric"
+                maxLength={2}
                 style={styles.shortPillInput}
               />
             </View>
