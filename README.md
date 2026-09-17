@@ -50,7 +50,7 @@ Foram desenvolvidas 6 interfaces no Figma, com navegação funcional entre todas
 5. Adicionar Evento
 6. Calendário de Eventos
 
-![Prototipagem no Figma]()
+https://www.figma.com/design/wcxwg7jtiqSh9rwMNDQ3g8/Prototipagem---mobile?m=auto&t=mu3G2902WYTMLaWr-6
 
 ---
 
