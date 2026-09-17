@@ -4,8 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function PetList({ navigation }: any) {
   const pets = [
-    { id: '1', nome: 'Pipoca', especie: 'xxx' },
-    { id: '2', nome: 'Kadule', especie: 'xxx' },
+    { id: '1', nome: 'Pipoca', especie: 'Cachorro' },
+    { id: '2', nome: 'Kadule', especie: 'Gato' },
   ];
 
   return (

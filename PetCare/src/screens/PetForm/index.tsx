@@ -4,12 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function PetForm({ navigation }: any) {
   const [nome, setNome] = useState('Pipoca');
-  const [especie, setEspecie] = useState('xxx');
-  const [raca, setRaca] = useState('xxx');
-  const [dataNasc, setDataNasc] = useState('');
-  const [idade, setIdade] = useState('');
+  const [especie, setEspecie] = useState('Beagle');
+  const [raca, setRaca] = useState('Cachorro');
+  const [dataNasc, setDataNasc] = useState('05/07/2025');
+  const [idade, setIdade] = useState('1');
 
-  
+
   function formatarData(texto: string) {
     const apenasNumeros = texto.replace(/\D/g, '');
 
