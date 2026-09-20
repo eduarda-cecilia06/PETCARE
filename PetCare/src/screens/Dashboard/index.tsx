@@ -14,7 +14,7 @@ export function Dashboard({ navigation }: any) {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <View style={styles.header}>
         <View style={styles.avatar} />
       </View>
@@ -75,7 +75,7 @@ export function Dashboard({ navigation }: any) {
           style={styles.bottomTab}
         >
           <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>histórico</Text>
+          <Text style={styles.tabLabel}>Histórico</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -84,7 +84,7 @@ export function Dashboard({ navigation }: any) {
           style={styles.bottomTab}
         >
           <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>pets</Text>
+          <Text style={styles.tabLabel}>Pets</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
