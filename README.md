@@ -35,7 +35,7 @@ O PetCare é uma aplicação mobile desenvolvida para auxiliar tutores de pets n
 
 O diagrama abaixo ilustra as interações entre os atores e as funcionalidades do sistema:
 
-![Diagrama de Casos de Uso](docs/DIAGRAMA_DE_CASOS_DE_USO.png)
+![Diagrama de Casos de Uso](PetCare/docs/DIAGRAMA_DE_CASOS_DE_USO.png)
 
 ---
 
@@ -51,6 +51,7 @@ Foram desenvolvidas 6 interfaces no Figma, com navegação funcional entre todas
 6. Calendário de Eventos
 
 Protótipo disponível em: [Figma - Prototipagem Mobile](https://www.figma.com/design/wcxwg7jtiqSh9rwMNDQ3g8/Prototipagem---mobile?m=auto&t=mu3G2902WYTMLaWr-6)
+
 ---
 
 ### Tecnologias Utilizadas:
@@ -100,9 +101,13 @@ npm run start
 ```
 
 5. Abra o aplicativo:
+```bash
 No celular: escaneie o QR Code que aparece no terminal com o app Expo Go
+
 No navegador: pressione w no terminal
+
 No emulador Android: pressione a no terminal
+```
 
 ---
 
