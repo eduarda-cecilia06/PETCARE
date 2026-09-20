@@ -3,12 +3,11 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function PetForm({ navigation }: any) {
-  const [nome, setNome] = useState('Pipoca');
-  const [especie, setEspecie] = useState('Beagle');
-  const [raca, setRaca] = useState('Cachorro');
-  const [dataNasc, setDataNasc] = useState('05/07/2025');
-  const [idade, setIdade] = useState('1');
-
+  const [nome, setNome] = useState('');
+  const [especie, setEspecie] = useState('');
+  const [raca, setRaca] = useState('');
+  const [dataNasc, setDataNasc] = useState('');
+  const [idade, setIdade] = useState('');
 
   function formatarData(texto: string) {
     const apenasNumeros = texto.replace(/\D/g, '');
@@ -45,7 +44,7 @@ export function PetForm({ navigation }: any) {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Seus pets</Text>
+        <Text style={styles.title}>Cadastrar Pet</Text>
 
         <View style={styles.card}>
           <View style={styles.topRow}>
@@ -57,6 +56,8 @@ export function PetForm({ navigation }: any) {
               <TextInput
                 value={nome}
                 onChangeText={setNome}
+                placeholder="Nome do pet"
+                placeholderTextColor="#666666"
                 style={styles.pillInput}
               />
             </View>
@@ -68,6 +69,7 @@ export function PetForm({ navigation }: any) {
               <TextInput
                 value={especie}
                 onChangeText={setEspecie}
+                placeholderTextColor="#666666"
                 style={styles.shortPillInput}
               />
             </View>
@@ -77,6 +79,7 @@ export function PetForm({ navigation }: any) {
               <TextInput
                 value={raca}
                 onChangeText={setRaca}
+                placeholderTextColor="#666666"
                 style={styles.shortPillInput}
               />
             </View>
