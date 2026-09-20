@@ -32,7 +32,7 @@ export function Dashboard({ navigation }: any) {
             <View style={styles.petThumb} />
             <View>
               <Text style={styles.petName}>{pet.nome}</Text>
-              <Text style={styles.petSpecies}>espécie: {pet.especie}</Text>
+              <Text style={styles.petSpecies}>Espécie: {pet.especie}</Text>
             </View>
           </TouchableOpacity>
         ))}
