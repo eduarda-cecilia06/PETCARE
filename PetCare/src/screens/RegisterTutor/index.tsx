@@ -8,7 +8,7 @@ export function RegisterTutor({ navigation }: any) {
   const [senha, setSenha] = useState('');
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <View style={styles.formContainer}>
         <Text style={styles.title}>Cadastre-se</Text>
 

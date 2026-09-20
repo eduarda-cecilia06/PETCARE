@@ -20,7 +20,7 @@ function formatarData(texto: string) {
 }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <View style={styles.header}>
         <View style={styles.avatar} />
       </View>

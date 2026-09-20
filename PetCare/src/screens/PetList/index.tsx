@@ -9,7 +9,7 @@ export function PetList({ navigation }: any) {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <View style={styles.header}>
         <View style={styles.avatar} />
       </View>
