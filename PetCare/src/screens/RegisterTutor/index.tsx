@@ -23,7 +23,7 @@ export function RegisterTutor({ navigation }: any) {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Email:</Text>
+          <Text style={styles.label}>E-mail</Text>
           <TextInput
             value={email}
             onChangeText={setEmail}

@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function AddEvent({ navigation }: any) {
-  const [tipo, setTipo] = useState('Vacina'); 
+  const [tipo, setTipo] = useState('Escolha a opção');
   const [data, setData] = useState('');
   const [obs, setObs] = useState('');
   const opcoes = ['Vacina', 'Consulta', 'Vermífugo', 'Medicamento', 'Exame'];
