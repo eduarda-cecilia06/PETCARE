@@ -4,13 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function Dashboard({ navigation }: any) {
   const pets = [
-    { id: '1', nome: 'Pipoca', especie: 'xxx' },
-    { id: '2', nome: 'Kadule', especie: 'xxx' },
+    {id: '1', nome: 'Pipoca', especie: 'Cachorro' },
+    { id: '2', nome: 'Kadule', especie: 'Gato' },
   ];
 
   const eventos = [
-    { id: '1', pet: 'Pipoca', descricao: 'tomar vermífugo', data: '20/06' },
-    { id: '2', pet: 'Kadule', descricao: 'comprimido de verme', data: '03/09' },
+    { id: '1', pet: 'Pipoca', descricao: 'Tomar vermífugo', data: '20/06' },
+    { id: '2', pet: 'Kadule', descricao: 'Comprimido de verme', data: '03/09' },
   ];
 
   return (
@@ -43,7 +43,7 @@ export function Dashboard({ navigation }: any) {
             onPress={() => navigation?.navigate('PetList')}
             style={styles.moreButton}
           >
-            <Text style={styles.moreButtonText}>ver mais</Text>
+            <Text style={styles.moreButtonText}>Ver mais</Text>
           </TouchableOpacity>
         </View>
 

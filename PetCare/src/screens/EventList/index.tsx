@@ -4,8 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function EventList({ navigation }: any) {
   const eventos = [
-    { id: '1', pet: 'Pipoca', acao: 'tomar vermífugo', data: '20/06' },
-    { id: '2', pet: 'Kadule', acao: 'comprimido de verme', data: '03/09' },
+    { id: '1', pet: 'Pipoca', acao: 'Tomar vermífugo', data: '20/06' },
+    { id: '2', pet: 'Kadule', acao: 'Comprimido de verme', data: '03/09' },
   ];
 
   return (

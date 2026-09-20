@@ -50,7 +50,7 @@ export function PetForm({ navigation }: any) {
         <View style={styles.card}>
           <View style={styles.topRow}>
             <TouchableOpacity style={styles.photoBox}>
-              <Text style={styles.photoText}>mudar foto</Text>
+              <Text style={styles.photoText}>Mudar foto</Text>
             </TouchableOpacity>
 
             <View style={styles.nameInputWrapper}>
@@ -114,7 +114,7 @@ export function PetForm({ navigation }: any) {
               onPress={() => navigation?.goBack()}
               style={styles.saveButton}
             >
-              <Text style={styles.saveButtonText}>salvar pet</Text>
+              <Text style={styles.saveButtonText}>Salvar pet</Text>
             </TouchableOpacity>
           </View>
         </View>

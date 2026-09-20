@@ -35,7 +35,7 @@ O PetCare é uma aplicação mobile desenvolvida para auxiliar tutores de pets n
 
 O diagrama abaixo ilustra as interações entre os atores e as funcionalidades do sistema:
 
-![Diagrama de Casos de Uso]()
+![Diagrama de Casos de Uso](docs/DIAGRAMA_DE_CASOS_DE_USO.png)
 
 ---
 
@@ -50,7 +50,59 @@ Foram desenvolvidas 6 interfaces no Figma, com navegação funcional entre todas
 5. Adicionar Evento
 6. Calendário de Eventos
 
-https://www.figma.com/design/wcxwg7jtiqSh9rwMNDQ3g8/Prototipagem---mobile?m=auto&t=mu3G2902WYTMLaWr-6
+Protótipo disponível em: [Figma - Prototipagem Mobile](https://www.figma.com/design/wcxwg7jtiqSh9rwMNDQ3g8/Prototipagem---mobile?m=auto&t=mu3G2902WYTMLaWr-6)
+---
+
+### Tecnologias Utilizadas:
+
+| Camada | Tecnologia |
+|--------|------------|
+| Front-end | React Native com Expo |
+| Estilização | NativeWind (Tailwind CSS) |
+| Navegação | Expo Router |
+| Linguagem | TypeScript |
+| Versionamento | Git e GitHub |
+
+---
+
+### Como Executar o Projeto:
+
+#### Pré-requisitos:
+
+- Node.js instalado (versão 18 ou superior)
+- Gerenciador de pacotes npm ou yarn
+- Aplicativo Expo Go instalado no celular (Android ou iOS)
+- Git instalado
+
+#### Passo a passo:
+
+1. Clone o repositório:
+
+```bash
+git clone https://github.com/eduarda-cecilia06/PETCARE.git
+```
+
+2. Acesse a pasta do projeto:
+
+```bash
+cd PetCare
+```
+
+3. Instale as dependências: 
+
+```bash
+npm install
+```
+
+4. Inicie o projeto:
+```bash
+npm run start
+```
+
+5. Abra o aplicativo:
+No celular: escaneie o QR Code que aparece no terminal com o app Expo Go
+No navegador: pressione w no terminal
+No emulador Android: pressione a no terminal
 
 ---
 
