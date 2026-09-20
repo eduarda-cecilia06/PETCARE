@@ -75,7 +75,7 @@ export function Dashboard({ navigation }: any) {
           style={styles.bottomTab}
         >
           <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>histórico</Text>
+          <Text style={styles.tabLabel}>Histórico</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -84,7 +84,7 @@ export function Dashboard({ navigation }: any) {
           style={styles.bottomTab}
         >
           <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>pets</Text>
+          <Text style={styles.tabLabel}>Pets</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
