@@ -208,3 +208,5 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
   },
 });
+
+export default RegisterTutor;

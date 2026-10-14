@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function EventList({ navigation }: any) {
-  // Inicializado sem dados estáticos antigos
   const [eventos, setEventos] = useState<any[]>([]);
   const [filtroAtivo, setFiltroAtivo] = useState('Todos');
 
@@ -34,7 +33,6 @@ export function EventList({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        /* Filtros em carrossel horizontal */
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
           {filtros.map((filtro) => (
             <TouchableOpacity
@@ -62,10 +60,12 @@ export function EventList({ navigation }: any) {
               <View style={styles.eventInfo}>
                 <View style={styles.eventHeaderRow}>
                   <Text style={styles.petName}>{item.petName || 'Pet'}</Text>
-                  <Text style={styles.eventDate}>{item.data}</Text>
+                  <Text style={styles.eventDate}>{item.data || ''}</Text>
                 </View>
-                <Text style={styles.eventTitle}>{item.nome}</Text>
-                {item.custo ? <Text style={styles.eventCost}>Valor: R$ {item.custo}</Text> : null}
+                <Text style={styles.eventTitle}>{item.nome || ''}</Text>
+                {Boolean(item.custo) && (
+                  <Text style={styles.eventCost}>Valor: R$ {item.custo}</Text>
+                )}
               </View>
               <View style={styles.typeBadge}>
                 <Text style={styles.typeBadgeText}>{item.tipo || 'Geral'}</Text>
@@ -300,3 +300,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
+export default EventList;
