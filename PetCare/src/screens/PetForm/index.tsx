@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 
 export function PetForm({ navigation }: any) {
   const [nome, setNome] = useState('');
@@ -10,6 +11,7 @@ export function PetForm({ navigation }: any) {
   const [idade, setIdade] = useState('');
   const [genero, setGenero] = useState('Macho');
   const [peso, setPeso] = useState('');
+  const [fotoUri, setFotoUri] = useState<string | null>(null);
 
   const especies = ['Cão', 'Gato', 'Ave', 'Coelho', 'Outro'];
 
@@ -40,13 +42,51 @@ export function PetForm({ navigation }: any) {
     }
   }
 
-  function handleTirarFoto() {
+  async function handleTirarFoto() {
     Alert.alert(
       'Foto do Pet',
-      'Escolha como deseja adicionar a foto do seu pet:',
+      'Escolha como deseja adicionar a foto:',
       [
-        { text: 'Tirar Foto (Câmera)', onPress: () => Alert.alert('Câmera', 'Recurso de câmera acionado!') },
-        { text: 'Escolher da Galeria', onPress: () => Alert.alert('Galeria', 'Galeria aberta!') },
+        {
+          text: 'Tirar com a Câmara',
+          onPress: async () => {
+            const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+            if (!permissionResult.granted) {
+              Alert.alert('Permissão negada', 'Precisamos de permissão para aceder à câmara.');
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+              setFotoUri(result.assets[0].uri);
+            }
+          },
+        },
+        {
+          text: 'Escolher da Galeria',
+          onPress: async () => {
+            const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (!permissionResult.granted) {
+              Alert.alert('Permissão negada', 'Precisamos de permissão para aceder à galeria.');
+              return;
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+              setFotoUri(result.assets[0].uri);
+            }
+          },
+        },
         { text: 'Cancelar', style: 'cancel' },
       ]
     );
@@ -77,7 +117,11 @@ export function PetForm({ navigation }: any) {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.photoContainer}>
           <TouchableOpacity activeOpacity={0.8} onPress={handleTirarFoto} style={styles.photoCircle}>
-            <Text style={styles.photoCircleText}>Foto</Text>
+            {fotoUri ? (
+              <Image source={{ uri: fotoUri }} style={styles.photoPreview} />
+            ) : (
+              <Text style={styles.photoCircleText}>Foto</Text>
+            )}
           </TouchableOpacity>
           <TouchableOpacity onPress={handleTirarFoto}>
             <Text style={styles.photoLabelText}>Tirar ou escolher foto da galeria</Text>
@@ -90,7 +134,7 @@ export function PetForm({ navigation }: any) {
             <TextInput
               value={nome}
               onChangeText={setNome}
-              placeholder="Ex: Pipoca"
+              placeholder="Escreva o nome do seu pet"
               placeholderTextColor="#9ca3af"
               style={styles.input}
             />
@@ -98,19 +142,13 @@ export function PetForm({ navigation }: any) {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Espécie *</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.speciesScroll}>
-              {especies.map((item) => (
-                <TouchableOpacity
-                  key={item}
-                  onPress={() => setEspecie(item)}
-                  style={[styles.speciesChip, especie === item && styles.speciesChipActive]}
-                >
-                  <Text style={[styles.speciesChipText, especie === item && styles.speciesChipTextActive]}>
-                    {item}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            <TextInput
+              value={especie}
+              onChangeText={setEspecie}
+              placeholder="Ex: Cão, Gato, Passarinho, Furão..."
+              placeholderTextColor="#9ca3af"
+              style={styles.input}
+            />
           </View>
 
           <View style={styles.inputGroup}>
@@ -118,7 +156,7 @@ export function PetForm({ navigation }: any) {
             <TextInput
               value={raca}
               onChangeText={setRaca}
-              placeholder="Ex: Golden Retriever ou SRD"
+              placeholder="Ex: SRD ou Poodle"
               placeholderTextColor="#9ca3af"
               style={styles.input}
             />
@@ -195,228 +233,39 @@ export function PetForm({ navigation }: any) {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      <View style={styles.bottomBar}>
-        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard')} style={styles.bottomTab}>
-          <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('PetList')} style={styles.bottomTab}>
-          <View style={[styles.tabIconCircle, styles.tabIconActive]} />
-          <Text style={[styles.tabLabel, styles.tabLabelActive]}>Pets</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('EventList')} style={styles.bottomTab}>
-          <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Histórico</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile')} style={styles.bottomTab}>
-          <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Perfil</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  headerNav: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  backButton: {
-    paddingVertical: 6,
-  },
-  backButtonText: {
-    color: '#64748b',
-    fontSize: 14,
-    fontFamily: 'monospace',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    fontFamily: 'monospace',
-  },
-  saveHeaderButton: {
-    paddingVertical: 6,
-  },
-  saveHeaderButtonText: {
-    color: '#16a34a',
-    fontSize: 14,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  photoContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  photoCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: '#dcfce7',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#86efac',
-    borderStyle: 'dashed',
-    marginBottom: 8,
-  },
-  photoCircleText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#16a34a',
-    fontFamily: 'monospace',
-  },
-  photoLabelText: {
-    fontSize: 12,
-    color: '#16a34a',
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: 20,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 13,
-    color: '#334155',
-    marginBottom: 6,
-    fontWeight: '600',
-    fontFamily: 'monospace',
-  },
-  input: {
-    width: '100%',
-    backgroundColor: '#f8fafc',
-    height: 46,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    fontSize: 13,
-    color: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    fontFamily: 'monospace',
-  },
-  speciesScroll: {
-    flexDirection: 'row',
-  },
-  speciesChip: {
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  speciesChipActive: {
-    backgroundColor: '#dcfce7',
-    borderColor: '#86efac',
-  },
-  speciesChipText: {
-    fontSize: 12,
-    color: '#64748b',
-    fontFamily: 'monospace',
-  },
-  speciesChipTextActive: {
-    color: '#16a34a',
-    fontWeight: 'bold',
-  },
-  rowButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  genderButton: {
-    flex: 1,
-    backgroundColor: '#f1f5f9',
-    height: 40,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  genderButtonActive: {
-    backgroundColor: '#dcfce7',
-    borderColor: '#86efac',
-  },
-  genderButtonText: {
-    fontSize: 12,
-    color: '#64748b',
-    fontFamily: 'monospace',
-  },
-  genderButtonTextActive: {
-    color: '#16a34a',
-    fontWeight: 'bold',
-  },
-  rowInputs: {
-    flexDirection: 'row',
-  },
-  primaryButton: {
-    backgroundColor: '#16a34a',
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
-  bottomBar: {
-    width: '100%',
-    height: 70,
-    backgroundColor: '#ffffff',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-  },
-  bottomTab: {
-    alignItems: 'center',
-  },
-  tabIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#cbd5e1',
-    marginBottom: 4,
-  },
-  tabIconActive: {
-    backgroundColor: '#22c55e',
-  },
-  tabLabel: {
-    fontSize: 11,
-    fontFamily: 'monospace',
-    color: '#64748b',
-  },
-  tabLabelActive: {
-    color: '#16a34a',
-    fontWeight: 'bold',
-  },
+  container: { flex: 1, backgroundColor: '#f8fafc' },
+  headerNav: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  backButton: { paddingVertical: 6 },
+  backButtonText: { color: '#64748b', fontSize: 14, fontFamily: 'monospace' },
+  headerTitle: { fontSize: 16, fontWeight: 'bold', color: '#0f172a', fontFamily: 'monospace' },
+  saveHeaderButton: { paddingVertical: 6 },
+  saveHeaderButtonText: { color: '#16a34a', fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace' },
+  scrollContent: { paddingHorizontal: 20, paddingVertical: 20 },
+  photoContainer: { alignItems: 'center', marginBottom: 20 },
+  photoCircle: { width: 90, height: 90, borderRadius: 45, backgroundColor: '#dcfce7', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#86efac', borderStyle: 'dashed', marginBottom: 8, overflow: 'hidden' },
+  photoPreview: { width: '100%', height: '100%' },
+  photoCircleText: { fontSize: 14, fontWeight: 'bold', color: '#16a34a', fontFamily: 'monospace' },
+  photoLabelText: { fontSize: 12, color: '#16a34a', fontWeight: 'bold', fontFamily: 'monospace' },
+  card: { backgroundColor: '#ffffff', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 20 },
+  inputGroup: { marginBottom: 16 },
+  label: { fontSize: 13, color: '#334155', marginBottom: 6, fontWeight: '600', fontFamily: 'monospace' },
+  input: { width: '100%', backgroundColor: '#f8fafc', height: 46, borderRadius: 12, paddingHorizontal: 14, fontSize: 13, color: '#0f172a', borderWidth: 1, borderColor: '#e2e8f0', fontFamily: 'monospace' },
+  speciesScroll: { flexDirection: 'row' },
+  speciesChip: { backgroundColor: '#f1f5f9', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, marginRight: 8, borderWidth: 1, borderColor: '#e2e8f0' },
+  speciesChipActive: { backgroundColor: '#dcfce7', borderColor: '#86efac' },
+  speciesChipText: { fontSize: 12, color: '#64748b', fontFamily: 'monospace' },
+  speciesChipTextActive: { color: '#16a34a', fontWeight: 'bold' },
+  rowButtons: { flexDirection: 'row', gap: 10 },
+  genderButton: { flex: 1, backgroundColor: '#f1f5f9', height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0' },
+  genderButtonActive: { backgroundColor: '#dcfce7', borderColor: '#86efac' },
+  genderButtonText: { fontSize: 12, color: '#64748b', fontFamily: 'monospace' },
+  genderButtonTextActive: { color: '#16a34a', fontWeight: 'bold' },
+  rowInputs: { flexDirection: 'row' },
+  primaryButton: { backgroundColor: '#16a34a', height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 8 },
+  primaryButtonText: { color: '#ffffff', fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace' },
 });

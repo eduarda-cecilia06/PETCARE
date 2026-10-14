@@ -3,9 +3,9 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function TutorProfile({ navigation }: any) {
-  const [nome, setNome] = useState('Mariana Silva');
-  const [email, setEmail] = useState('mariana.silva@exemplo.com');
-  const [telefone, setTelefone] = useState('(11) 98765-4321');
+  const [nome, setNome] = useState('Cliente Um');
+  const [email, setEmail] = useState('clienteum@gmail.com');
+  const [telefone, setTelefone] = useState('(13) 98765-4321');
 
   function handleSalvar() {
     Alert.alert('Sucesso', 'Dados do perfil atualizados com sucesso!');
