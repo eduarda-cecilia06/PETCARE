@@ -1,90 +1,95 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function Dashboard({ navigation }: any) {
-  const pets = [
-    {id: '1', nome: 'Pipoca', especie: 'Cachorro' },
-    { id: '2', nome: 'Kadule', especie: 'Gato' },
-  ];
+  const [totalPets, setTotalPets] = useState(0);
+  const [totalEventos, setTotalEventos] = useState(0);
+  const [totalGastos, setTotalGastos] = useState('0.00');
 
-  const eventos = [
-    { id: '1', pet: 'Pipoca', descricao: 'Tomar vermífugo', data: '20/06' },
-    { id: '2', pet: 'Kadule', descricao: 'Comprimido de verme', data: '03/09' },
-  ];
+  function handleGerarRelatorio() {
+    Alert.alert('Relatório PDF', 'Relatório de saúde e despesas gerado com sucesso!');
+  }
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <View style={styles.header}>
-        <View style={styles.avatar} />
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <View style={styles.headerNav}>
+        <View>
+          <Text style={styles.welcomeText}>Olá, Tutor(a)</Text>
+          <Text style={styles.headerTitle}>Painel Principal</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => navigation?.navigate('TutorProfile')}
+          style={styles.profileButton}
+        >
+          <Text style={styles.profileButtonText}>Perfil</Text>
+        </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionTitle}>Seus pets</Text>
-
-        {pets.map((pet) => (
-          <TouchableOpacity
-            key={pet.id}
-            activeOpacity={0.8}
-            onPress={() => navigation?.navigate('PetForm')}
-            style={styles.petCard}
-          >
-            <View style={styles.petThumb} />
-            <View>
-              <Text style={styles.petName}>{pet.nome}</Text>
-              <Text style={styles.petSpecies}>Espécie: {pet.especie}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-
-        <View style={styles.moreButtonWrapper}>
-          <TouchableOpacity
-            activeOpacity={0.8}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.metricsRow}>
+          <TouchableOpacity 
+            style={styles.metricCard}
             onPress={() => navigation?.navigate('PetList')}
-            style={styles.moreButton}
           >
-            <Text style={styles.moreButtonText}>Ver mais</Text>
+            <Text style={styles.metricNumber}>{totalPets}</Text>
+            <Text style={styles.metricLabel}>Pets Cadastrados</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.metricCard}
+            onPress={() => navigation?.navigate('EventList')}
+          >
+            <Text style={styles.metricNumber}>{totalEventos}</Text>
+            <Text style={styles.metricLabel}>Eventos / Cuidados</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionSubtitle}>Próximos eventos:</Text>
+        <View style={styles.financialCard}>
+          <Text style={styles.financialTitle}>Despesas Totais (Mês)</Text>
+          <Text style={styles.financialValue}>R$ {totalGastos}</Text>
+          <TouchableOpacity onPress={handleGerarRelatorio} style={styles.pdfButton}>
+            <Text style={styles.pdfButtonText}>📄 Exportar Relatório em PDF</Text>
+          </TouchableOpacity>
+        </View>
 
-        {eventos.map((evento) => (
-          <View key={evento.id} style={styles.eventRow}>
-            <Text style={styles.eventPet}>{evento.pet}</Text>
-            <Text style={styles.eventDesc}>{evento.descricao}</Text>
-            <Text style={styles.eventDate}>{evento.data}</Text>
-          </View>
-        ))}
-
-        <View style={styles.addEventWrapper}>
+        <Text style={styles.sectionTitle}>Ações Rápidas</Text>
+        
+        <View style={styles.actionsGrid}>
           <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => navigation?.navigate('AddEvent')}
-            style={styles.addEventButton}
+            style={styles.actionCard}
+            onPress={() => navigation?.navigate('PetForm')}
           >
-            <Text style={styles.addEventButtonText}>Adicionar evento</Text>
+            <Text style={styles.actionCardTitle}>+ Cadastrar Pet</Text>
+            <Text style={styles.actionCardDesc}>Adicione um novo companheiro</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => navigation?.navigate('AddEvent')}
+          >
+            <Text style={styles.actionCardTitle}>+ Novo Evento</Text>
+            <Text style={styles.actionCardDesc}>Registe vacinas, consultas ou gastos</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => navigation?.navigate('EventList')}
-          style={styles.bottomTab}
-        >
+        <TouchableOpacity style={styles.bottomTab}>
+          <View style={[styles.tabIconCircle, styles.tabIconActive]} />
+          <Text style={[styles.tabLabel, styles.tabLabelActive]}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation?.navigate('PetList')} style={styles.bottomTab}>
+          <View style={styles.tabIconCircle} />
+          <Text style={styles.tabLabel}>Pets</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation?.navigate('EventList')} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Histórico</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => navigation?.navigate('PetList')}
-          style={styles.bottomTab}
-        >
+        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile')} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Pets</Text>
+          <Text style={styles.tabLabel}>Perfil</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -92,157 +97,31 @@ export function Dashboard({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    justifyContent: 'space-between',
-  },
-  header: {
-    width: '100%',
-    height: 70,
-    backgroundColor: '#d4d4d4',
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#737373',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontFamily: 'monospace',
-    textAlign: 'center',
-    color: '#000000',
-    marginBottom: 16,
-  },
-  petCard: {
-    width: '100%',
-    backgroundColor: '#d4d4d4',
-    borderRadius: 8,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  petThumb: {
-    width: 60,
-    height: 60,
-    backgroundColor: '#737373',
-    borderRadius: 4,
-    marginRight: 16,
-  },
-  petName: {
-    fontSize: 17,
-    fontFamily: 'monospace',
-    fontWeight: 'bold',
-    color: '#000000',
-  },
-  petSpecies: {
-    fontSize: 13,
-    fontFamily: 'monospace',
-    color: '#404040',
-    marginTop: 4,
-  },
-  moreButtonWrapper: {
-    alignItems: 'flex-end',
-    marginBottom: 24,
-  },
-  moreButton: {
-    backgroundColor: '#15803d',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  moreButtonText: {
-    color: '#ffffff',
-    fontFamily: 'monospace',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  sectionSubtitle: {
-    fontSize: 19,
-    fontFamily: 'monospace',
-    color: '#000000',
-    marginBottom: 14,
-  },
-  eventRow: {
-    width: '100%',
-    backgroundColor: '#d4d4d4',
-    borderRadius: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  eventPet: {
-    fontSize: 14,
-    fontFamily: 'monospace',
-    fontWeight: 'bold',
-    color: '#000000',
-    width: '25%',
-  },
-  eventDesc: {
-    fontSize: 11,
-    fontFamily: 'monospace',
-    color: '#171717',
-    flex: 1,
-    textAlign: 'center',
-  },
-  eventDate: {
-    fontSize: 11,
-    fontFamily: 'monospace',
-    color: '#404040',
-    width: '25%',
-    textAlign: 'right',
-  },
-  addEventWrapper: {
-    alignItems: 'flex-start',
-    marginTop: 10,
-    marginBottom: 24,
-  },
-  addEventButton: {
-    backgroundColor: '#15803d',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  addEventButtonText: {
-    color: '#ffffff',
-    fontFamily: 'monospace',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  bottomBar: {
-    width: '100%',
-    height: 75,
-    backgroundColor: '#d4d4d4',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  bottomTab: {
-    alignItems: 'center',
-  },
-  tabIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#737373',
-    marginBottom: 4,
-  },
-  tabLabel: {
-    fontSize: 11,
-    fontFamily: 'monospace',
-    color: '#171717',
-  },
+  container: { flex: 1, backgroundColor: '#f8fafc' },
+  headerNav: { height: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  welcomeText: { fontSize: 12, color: '#64748b', fontFamily: 'monospace' },
+  headerTitle: { fontSize: 16, fontWeight: 'bold', color: '#0f172a', fontFamily: 'monospace' },
+  profileButton: { backgroundColor: '#f1f5f9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0' },
+  profileButtonText: { fontSize: 12, fontWeight: 'bold', color: '#334155', fontFamily: 'monospace' },
+  scrollContent: { paddingHorizontal: 20, paddingVertical: 20 },
+  metricsRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  metricCard: { flex: 1, backgroundColor: '#ffffff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center' },
+  metricNumber: { fontSize: 24, fontWeight: 'bold', color: '#16a34a', fontFamily: 'monospace', marginBottom: 4 },
+  metricLabel: { fontSize: 11, color: '#64748b', fontFamily: 'monospace', textAlign: 'center' },
+  financialCard: { backgroundColor: '#ffffff', padding: 20, borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 24 },
+  financialTitle: { fontSize: 12, color: '#64748b', fontFamily: 'monospace', marginBottom: 4 },
+  financialValue: { fontSize: 24, fontWeight: 'bold', color: '#0f172a', fontFamily: 'monospace', marginBottom: 16 },
+  pdfButton: { backgroundColor: '#f0fdf4', paddingVertical: 10, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#86efac' },
+  pdfButtonText: { fontSize: 12, fontWeight: 'bold', color: '#16a34a', fontFamily: 'monospace' },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#0f172a', fontFamily: 'monospace', marginBottom: 12 },
+  actionsGrid: { flexDirection: 'row', gap: 12 },
+  actionCard: { flex: 1, backgroundColor: '#ffffff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0' },
+  actionCardTitle: { fontSize: 14, fontWeight: 'bold', color: '#16a34a', fontFamily: 'monospace', marginBottom: 4 },
+  actionCardDesc: { fontSize: 11, color: '#64748b', fontFamily: 'monospace' },
+  bottomBar: { width: '100%', height: 70, backgroundColor: '#ffffff', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#f1f5f9' },
+  bottomTab: { alignItems: 'center' },
+  tabIconCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#cbd5e1', marginBottom: 4 },
+  tabIconActive: { backgroundColor: '#22c55e' },
+  tabLabel: { fontSize: 11, fontFamily: 'monospace', color: '#64748b' },
+  tabLabelActive: { color: '#16a34a', fontWeight: 'bold' },
 });

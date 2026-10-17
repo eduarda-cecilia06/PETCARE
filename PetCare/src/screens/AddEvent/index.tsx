@@ -1,96 +1,145 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function AddEvent({ navigation }: any) {
-  const [tipo, setTipo] = useState('Escolha a opção');
+  const [nome, setNome] = useState('');
+  const [tipo, setTipo] = useState('Vacina');
   const [data, setData] = useState('');
+  const [custo, setCusto] = useState('');
   const [obs, setObs] = useState('');
-  const opcoes = ['Vacina', 'Consulta', 'Vermífugo', 'Medicamento', 'Exame'];
 
-function formatarData(texto: string) {
-  const apenasNumeros = texto.replace(/\D/g, '');
-  if (apenasNumeros.length <= 2) {
-    return apenasNumeros;
+  const tiposEvento = ['Vacina', 'Consulta', 'Vermífugo', 'Medicamento', 'Exame', 'Cirurgia'];
+
+  function formatarData(texto: string) {
+    const apenasNumeros = texto.replace(/\D/g, '');
+    if (apenasNumeros.length <= 2) {
+      return apenasNumeros;
+    }
+    if (apenasNumeros.length <= 4) {
+      return `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2)}`;
+    }
+    return `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4, 8)}`;
   }
-  if (apenasNumeros.length <= 4) {
-    return `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2)}`;
+
+  function handleSalvarEvento() {
+    if (!nome.trim()) {
+      Alert.alert('Atenção', 'Por favor, informe o nome do evento.');
+      return;
+    }
+    Alert.alert('Sucesso', 'Evento cadastrado com sucesso!', [
+      { text: 'OK', onPress: () => navigation?.goBack() },
+    ]);
   }
-  return `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4, 8)}`;
-}
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <View style={styles.header}>
-        <View style={styles.avatar} />
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <View style={styles.headerNav}>
+        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
+          <Text style={styles.backButtonText}>Cancelar</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Novo Evento</Text>
+        <TouchableOpacity onPress={handleSalvarEvento} style={styles.saveHeaderButton}>
+          <Text style={styles.saveHeaderButtonText}>Salvar</Text>
+        </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Adicionar novo evento:</Text>
-
-        <Text style={styles.fieldLabel}>Tipo:</Text>
-        <View style={styles.typeCard}>
-          <Text style={styles.selectedTypeText}>{tipo}</Text>
-          
-          <View style={styles.typeList}>
-            {opcoes.map((opcao) => (
-              <TouchableOpacity 
-                key={opcao} 
-                onPress={() => setTipo(opcao)}
-                style={styles.touchableOption}
-              >
-
-                <Text style={[
-                  styles.typeItem, 
-                  tipo === opcao && styles.typeItemActive
-                ]}>
-                  {opcao}
-                </Text>
-              </TouchableOpacity>
-            ))}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.card}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Nome do Evento *</Text>
+            <TextInput
+              value={nome}
+              onChangeText={setNome}
+              placeholder="Ex: Vacina V10 Polivalente Anual"
+              placeholderTextColor="#9ca3af"
+              style={styles.input}
+            />
           </View>
-        </View>
 
-        <Text style={styles.fieldLabel}>Data:</Text>
-        <TextInput
-            value={data}
-            onChangeText={(texto) => setData(formatarData(texto))}
-            keyboardType="numeric"
-            maxLength={10}
-            placeholder="dd/mm/aaaa"
-            placeholderTextColor="#737373"
-            style={styles.pillInput}
-        />
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Tipo de Evento</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typesScroll}>
+              {tiposEvento.map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  onPress={() => setTipo(item)}
+                  style={[styles.typeChip, tipo === item && styles.typeChipActive]}
+                >
+                  <Text style={[styles.typeChipText, tipo === item && styles.typeChipTextActive]}>
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
 
-        <Text style={styles.fieldLabel}>Observações:</Text>
-        <TextInput
-          value={obs}
-          onChangeText={setObs}
-          placeholder="Adicione observações"
-          placeholderTextColor="#737373"
-          style={styles.pillInput}
-        />
+          <View style={styles.rowInputs}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+              <Text style={styles.label}>Data</Text>
+              <TextInput
+                value={data}
+                onChangeText={(texto) => setData(formatarData(texto))}
+                placeholder="dd/mm/aaaa"
+                placeholderTextColor="#9ca3af"
+                keyboardType="numeric"
+                maxLength={10}
+                style={styles.input}
+              />
+            </View>
 
-        <View style={styles.buttonWrapper}>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>Custo / Valor (R$)</Text>
+              <TextInput
+                value={custo}
+                onChangeText={setCusto}
+                placeholder="Ex: 150.00"
+                placeholderTextColor="#9ca3af"
+                keyboardType="numeric"
+                style={styles.input}
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Descrição / Observações</Text>
+            <TextInput
+              value={obs}
+              onChangeText={setObs}
+              placeholder="Adicione observações ou instruções clínicas"
+              placeholderTextColor="#9ca3af"
+              multiline
+              numberOfLines={3}
+              style={[styles.input, styles.textArea]}
+            />
+          </View>
+
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => navigation?.goBack()}
-            style={styles.submitButton}
+            onPress={handleSalvarEvento}
+            style={styles.primaryButton}
           >
-            <Text style={styles.submitButtonText}>Criar evento</Text>
+            <Text style={styles.primaryButtonText}>Criar Evento</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* Rodapé Fixo */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity onPress={() => navigation?.navigate('EventList')} style={styles.bottomTab}>
-          <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Histórico</Text>
-        </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation?.navigate('Dashboard')} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
+          <Text style={styles.tabLabel}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation?.navigate('PetList')} style={styles.bottomTab}>
+          <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Pets</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation?.navigate('EventList')} style={styles.bottomTab}>
+          <View style={[styles.tabIconCircle, styles.tabIconActive]} />
+          <Text style={[styles.tabLabel, styles.tabLabelActive]}>Histórico</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile')} style={styles.bottomTab}>
+          <View style={styles.tabIconCircle} />
+          <Text style={styles.tabLabel}>Perfil</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -98,26 +147,153 @@ function formatarData(texto: string) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff', justifyContent: 'space-between' },
-  header: { width: '100%', height: 70, backgroundColor: '#d4d4d4', paddingHorizontal: 24, justifyContent: 'center', alignItems: 'flex-end' },
-  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#737373' },
-  content: { flex: 1, paddingHorizontal: 24, paddingTop: 16 },
-  title: { fontSize: 20, fontFamily: 'monospace', color: '#000000', marginBottom: 20 },
-  fieldLabel: { fontFamily: 'monospace', fontSize: 14, color: '#171717', marginBottom: 8 },
-  
-  typeCard: { width: '100%', backgroundColor: '#d4d4d4', borderRadius: 20, padding: 12, marginBottom: 16 },
-  selectedTypeText: { fontFamily: 'monospace', fontSize: 14, fontWeight: 'bold', color: '#000000', marginBottom: 8, paddingHorizontal: 4 },
-  typeList: { backgroundColor: '#8c8c8c', borderRadius: 8, padding: 12, gap: 8 },
-  touchableOption: { paddingVertical: 2 },
-  typeItem: { color: '#d4d4d4', fontFamily: 'monospace', fontSize: 13 },
-  typeItemActive: { color: '#ffffff', fontWeight: 'bold' }, 
-  
-  pillInput: { width: '100%', backgroundColor: '#d4d4d4', height: 42, borderRadius: 21, paddingHorizontal: 16, fontFamily: 'monospace', fontSize: 13, color: '#000000', marginBottom: 16 },
-  buttonWrapper: { alignItems: 'center', marginTop: 16, marginBottom: 24 },
-  submitButton: { backgroundColor: '#15803d', paddingHorizontal: 26, paddingVertical: 10, borderRadius: 20 },
-  submitButtonText: { color: '#ffffff', fontFamily: 'monospace', fontSize: 13, fontWeight: 'bold' },
-  bottomBar: { width: '100%', height: 75, backgroundColor: '#d4d4d4', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
-  bottomTab: { alignItems: 'center' },
-  tabIconCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#737373', marginBottom: 4 },
-  tabLabel: { fontSize: 11, fontFamily: 'monospace', color: '#171717' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  headerNav: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  backButton: {
+    paddingVertical: 6,
+  },
+  backButtonText: {
+    color: '#64748b',
+    fontSize: 14,
+    fontFamily: 'monospace',
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#0f172a',
+    fontFamily: 'monospace',
+  },
+  saveHeaderButton: {
+    paddingVertical: 6,
+  },
+  saveHeaderButtonText: {
+    color: '#16a34a',
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontFamily: 'monospace',
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 13,
+    color: '#334155',
+    marginBottom: 6,
+    fontWeight: '600',
+    fontFamily: 'monospace',
+  },
+  input: {
+    width: '100%',
+    backgroundColor: '#f8fafc',
+    height: 46,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    fontSize: 13,
+    color: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    fontFamily: 'monospace',
+  },
+  textArea: {
+    height: 80,
+    paddingTop: 12,
+    textAlignVertical: 'top',
+  },
+  typesScroll: {
+    flexDirection: 'row',
+  },
+  typeChip: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  typeChipActive: {
+    backgroundColor: '#dcfce7',
+    borderColor: '#86efac',
+  },
+  typeChipText: {
+    fontSize: 12,
+    color: '#64748b',
+    fontFamily: 'monospace',
+  },
+  typeChipTextActive: {
+    color: '#16a34a',
+    fontWeight: 'bold',
+  },
+  rowInputs: {
+    flexDirection: 'row',
+  },
+  primaryButton: {
+    backgroundColor: '#16a34a',
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  primaryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontFamily: 'monospace',
+  },
+  bottomBar: {
+    width: '100%',
+    height: 70,
+    backgroundColor: '#ffffff',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  bottomTab: {
+    alignItems: 'center',
+  },
+  tabIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#cbd5e1',
+    marginBottom: 4,
+  },
+  tabIconActive: {
+    backgroundColor: '#22c55e',
+  },
+  tabLabel: {
+    fontSize: 11,
+    fontFamily: 'monospace',
+    color: '#64748b',
+  },
+  tabLabelActive: {
+    color: '#16a34a',
+    fontWeight: 'bold',
+  },
 });
