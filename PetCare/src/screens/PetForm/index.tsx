@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import { apiFetch } from '../../services/api';
 
-export function PetForm({ navigation }: any) {
+export function PetForm({ route, navigation }: any) {
   const [nome, setNome] = useState('');
   const [especie, setEspecie] = useState('Cão');
   const [raca, setRaca] = useState('');
@@ -24,6 +25,15 @@ export function PetForm({ navigation }: any) {
       return `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2)}`;
     }
     return `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4, 8)}`;
+  }
+
+  // mudança de data para enviar ao backend de forma que seja aceito
+  function converterDataParaISO(dataBR: string) {
+    const partes = dataBR.split('/');
+    if (partes.length === 3) {
+      return `${partes[2]}-${partes[1]}-${partes[0]}`;
+    }
+    return null;
   }
 
   function handleDataChange(texto: string) {
@@ -97,9 +107,33 @@ export function PetForm({ navigation }: any) {
       Alert.alert('Atenção', 'Por favor, informe o nome do pet.');
       return;
     }
-    Alert.alert('Sucesso', 'Pet salvo com sucesso!', [
-      { text: 'OK', onPress: () => navigation?.goBack() },
-    ]);
+
+    //pro servidor n ficar perguntando td hora quem é e confirmando e senha e tal
+    const token = route?.params?.token;
+
+    apiFetch('/api/pets', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        nome: nome,
+        especie: especie,
+        raca: raca || null,
+        data_nascimento: dataNasc ? converterDataParaISO(dataNasc) : null,
+        genero: genero,
+        peso: peso ? parseFloat(peso) : null,
+        foto: fotoUri || null,
+      }),
+    })
+      .then(() => {
+        Alert.alert('Sucesso', 'Pet salvo com sucesso!', [
+          { text: 'OK', onPress: () => navigation?.goBack() },
+        ]);
+      })
+      .catch((error) => {
+        Alert.alert('Erro ao Salvar Pet', error.message);
+      });
   }
 
   return (

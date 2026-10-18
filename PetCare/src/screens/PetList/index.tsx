@@ -1,14 +1,40 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { apiFetch } from '../../services/api';
 
-export function PetList({ navigation }: any) {
+export function PetList({ route, navigation }: any) {
+  const token = route?.params?.token;
   const [pets, setPets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    carregarPets();
+  }, []);
+
+  function carregarPets() {
+    setLoading(true);
+    apiFetch('/api/pets', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((data) => {
+        setPets(data || []);
+      })
+      .catch((error) => {
+        Alert.alert('Erro', error.message || 'Não foi possível carregar a lista de pets.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.headerNav}>
-        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard')} style={styles.backButton}>
+        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard', { token })} style={styles.backButton}>
           <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Meus Pets</Text>
@@ -23,14 +49,16 @@ export function PetList({ navigation }: any) {
           </View>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => navigation?.navigate('PetForm')}
+            onPress={() => navigation?.navigate('PetForm', { token })}
             style={styles.addButtonHeader}
           >
             <Text style={styles.addButtonHeaderText}>+ Adicionar</Text>
           </TouchableOpacity>
         </View>
 
-        {pets.length === 0 ? (
+        {loading ? (
+          <ActivityIndicator size="large" color="#16a34a" style={{ marginTop: 30 }} />
+        ) : pets.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyTitle}>Nenhum pet cadastrado</Text>
             <Text style={styles.emptySubtitle}>
@@ -42,7 +70,7 @@ export function PetList({ navigation }: any) {
             <TouchableOpacity
               key={pet.id}
               activeOpacity={0.8}
-              onPress={() => navigation?.navigate('PetForm')}
+              onPress={() => navigation?.navigate('PetForm', { token, petId: pet.id })}
               style={styles.petCard}
             >
               <View style={styles.petThumb}>
@@ -59,7 +87,7 @@ export function PetList({ navigation }: any) {
                   </View>
                 </View>
                 <Text style={styles.petSpecies}>{pet.especie} • {pet.raca || 'Sem raça definida'}</Text>
-                <Text style={styles.petDetailsText}>{pet.idade ? `${pet.idade} anos` : 'Idade não informada'}</Text>
+                <Text style={styles.petDetailsText}>{pet.data_nascimento ? `Nascido em: ${pet.data_nascimento}` : 'Data não informada'}</Text>
               </View>
             </TouchableOpacity>
           ))
@@ -67,19 +95,19 @@ export function PetList({ navigation }: any) {
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard', { token })} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('PetList')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('PetList', { token })} style={styles.bottomTab}>
           <View style={[styles.tabIconCircle, styles.tabIconActive]} />
           <Text style={[styles.tabLabel, styles.tabLabelActive]}>Pets</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('EventList')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('EventList', { token })} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Histórico</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile', { token })} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Perfil</Text>
         </TouchableOpacity>

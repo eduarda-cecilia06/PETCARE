@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export function TutorProfile({ navigation }: any) {
+export function TutorProfile({ route, navigation }: any) {
+  const token = route?.params?.token;
   const [nome, setNome] = useState('Cliente Um');
   const [email, setEmail] = useState('clienteum@gmail.com');
   const [telefone, setTelefone] = useState('(13) 98765-4321');
@@ -29,7 +30,7 @@ export function TutorProfile({ navigation }: any) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.headerNav}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard', { token })} style={styles.backButton}>
           <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Perfil do Tutor</Text>
@@ -39,7 +40,9 @@ export function TutorProfile({ navigation }: any) {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.profileHeader}>
           <View style={styles.avatarCircle}>
-            <Text style={styles.avatarInitials}>MS</Text>
+            <Text style={styles.avatarInitials}>
+              {nome ? nome.substring(0, 2).toUpperCase() : 'MS'}
+            </Text>
           </View>
           <Text style={styles.tutorName}>{nome}</Text>
           <Text style={styles.tutorBadge}>Tutora Cadastrada</Text>
@@ -109,19 +112,19 @@ export function TutorProfile({ navigation }: any) {
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard', { token })} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('PetList')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('PetList', { token })} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Pets</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('EventList')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('EventList', { token })} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Histórico</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile', { token })} style={styles.bottomTab}>
           <View style={[styles.tabIconCircle, styles.tabIconActive]} />
           <Text style={[styles.tabLabel, styles.tabLabelActive]}>Perfil</Text>
         </TouchableOpacity>
@@ -314,3 +317,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
+export default TutorProfile;

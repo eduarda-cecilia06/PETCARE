@@ -1,11 +1,61 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { apiFetch } from '../../services/api';
 
-export function Dashboard({ navigation }: any) {
+export function Dashboard({ route, navigation }: any) {
+  const token = route?.params?.token;
   const [totalPets, setTotalPets] = useState(0);
   const [totalEventos, setTotalEventos] = useState(0);
   const [totalGastos, setTotalGastos] = useState('0.00');
+
+  useEffect(() => {
+    carregarDadosPainel();
+  }, []);
+
+  function carregarDadosPainel() {
+    // vai buscar os pets do usuário logado
+    apiFetch('/api/pets', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (pets) => {
+        setTotalPets(pets.length || 0);
+
+        // isso aqui é opcional, se quiser puxar eventos de cada pet para somar custos e total
+        let eventosTotais = 0;
+        let gastosTotais = 0;
+
+        for (const pet of pets) {
+          try {
+            const eventos = await apiFetch(`/api/pets/${pet.id}/eventos`, {
+              method: 'GET',
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+            if (Array.isArray(eventos)) {
+              eventosTotais += eventos.length;
+              eventos.forEach((ev: any) => {
+                if (ev.custo) {
+                  gastosTotais += parseFloat(ev.custo);
+                }
+              });
+            }
+          } catch (e) {
+            // Ignora falhas pontuais de eventos por pet
+          }
+        }
+
+        setTotalEventos(eventosTotais);
+        setTotalGastos(gastosTotais.toFixed(2));
+      })
+      .catch((error) => {
+        Alert.alert('Aviso', 'Não foi possível sincronizar os dados do painel.');
+      });
+  }
 
   function handleGerarRelatorio() {
     Alert.alert('Relatório PDF', 'Relatório de saúde e despesas gerado com sucesso!');
@@ -19,7 +69,7 @@ export function Dashboard({ navigation }: any) {
           <Text style={styles.headerTitle}>Painel Principal</Text>
         </View>
         <TouchableOpacity
-          onPress={() => navigation?.navigate('TutorProfile')}
+          onPress={() => navigation?.navigate('TutorProfile', { token })}
           style={styles.profileButton}
         >
           <Text style={styles.profileButtonText}>Perfil</Text>
@@ -30,7 +80,7 @@ export function Dashboard({ navigation }: any) {
         <View style={styles.metricsRow}>
           <TouchableOpacity 
             style={styles.metricCard}
-            onPress={() => navigation?.navigate('PetList')}
+            onPress={() => navigation?.navigate('PetList', { token })}
           >
             <Text style={styles.metricNumber}>{totalPets}</Text>
             <Text style={styles.metricLabel}>Pets Cadastrados</Text>
@@ -38,7 +88,7 @@ export function Dashboard({ navigation }: any) {
 
           <TouchableOpacity 
             style={styles.metricCard}
-            onPress={() => navigation?.navigate('EventList')}
+            onPress={() => navigation?.navigate('EventList', { token })}
           >
             <Text style={styles.metricNumber}>{totalEventos}</Text>
             <Text style={styles.metricLabel}>Eventos / Cuidados</Text>
@@ -58,7 +108,7 @@ export function Dashboard({ navigation }: any) {
         <View style={styles.actionsGrid}>
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => navigation?.navigate('PetForm')}
+            onPress={() => navigation?.navigate('PetForm', { token })}
           >
             <Text style={styles.actionCardTitle}>+ Cadastrar Pet</Text>
             <Text style={styles.actionCardDesc}>Adicione um novo companheiro</Text>
@@ -66,7 +116,7 @@ export function Dashboard({ navigation }: any) {
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => navigation?.navigate('AddEvent')}
+            onPress={() => navigation?.navigate('AddEvent', { token })}
           >
             <Text style={styles.actionCardTitle}>+ Novo Evento</Text>
             <Text style={styles.actionCardDesc}>Registe vacinas, consultas ou gastos</Text>
@@ -79,15 +129,15 @@ export function Dashboard({ navigation }: any) {
           <View style={[styles.tabIconCircle, styles.tabIconActive]} />
           <Text style={[styles.tabLabel, styles.tabLabelActive]}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('PetList')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('PetList', { token })} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Pets</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('EventList')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('EventList', { token })} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Histórico</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile', { token })} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Perfil</Text>
         </TouchableOpacity>
@@ -125,3 +175,5 @@ const styles = StyleSheet.create({
   tabLabel: { fontSize: 11, fontFamily: 'monospace', color: '#64748b' },
   tabLabelActive: { color: '#16a34a', fontWeight: 'bold' },
 });
+
+export default Dashboard;

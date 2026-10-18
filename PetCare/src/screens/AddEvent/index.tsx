@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { apiFetch } from '../../services/api';
 
-export function AddEvent({ navigation }: any) {
+export function AddEvent({ route, navigation }: any) {
+  const token = route?.params?.token;
+  const [pets, setPets] = useState<any[]>([]);
+  const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
+
   const [nome, setNome] = useState('');
   const [tipo, setTipo] = useState('Vacina');
   const [data, setData] = useState('');
@@ -10,6 +15,28 @@ export function AddEvent({ navigation }: any) {
   const [obs, setObs] = useState('');
 
   const tiposEvento = ['Vacina', 'Consulta', 'Vermífugo', 'Medicamento', 'Exame', 'Cirurgia'];
+
+  useEffect(() => {
+    carregarPetsDoTutor();
+  }, []);
+
+  function carregarPetsDoTutor() {
+    apiFetch('/api/pets', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((dataPets) => {
+        if (Array.isArray(dataPets) && dataPets.length > 0) {
+          setPets(dataPets);
+          setSelectedPetId(dataPets[0].id);
+        }
+      })
+      .catch(() => {
+        // aqui ele meio que silencia erro de carregamento prévio
+      });
+  }
 
   function formatarData(texto: string) {
     const apenasNumeros = texto.replace(/\D/g, '');
@@ -22,14 +49,46 @@ export function AddEvent({ navigation }: any) {
     return `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4, 8)}`;
   }
 
+  function converterDataParaISO(dataBR: string) {
+    const partes = dataBR.split('/');
+    if (partes.length === 3) {
+      return `${partes[2]}-${partes[1]}-${partes[0]}T00:00:00`;
+    }
+    return new Date().toISOString();
+  }
+
   function handleSalvarEvento() {
     if (!nome.trim()) {
       Alert.alert('Atenção', 'Por favor, informe o nome do evento.');
       return;
     }
-    Alert.alert('Sucesso', 'Evento cadastrado com sucesso!', [
-      { text: 'OK', onPress: () => navigation?.goBack() },
-    ]);
+
+    if (!selectedPetId) {
+      Alert.alert('Atenção', 'Você precisa ter pelo menos um pet cadastrado para adicionar um evento.');
+      return;
+    }
+
+    apiFetch(`/api/pets/${selectedPetId}/eventos`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        tipo: tipo,
+        nome: nome,
+        data: data ? converterDataParaISO(data) : new Date().toISOString(),
+        descricao: obs || null,
+        custo: custo ? parseFloat(custo.replace(',', '.')) : null,
+      }),
+    })
+      .then(() => {
+        Alert.alert('Sucesso', 'Evento cadastrado com sucesso!', [
+          { text: 'OK', onPress: () => navigation?.goBack() },
+        ]);
+      })
+      .catch((error) => {
+        Alert.alert('Erro ao Salvar Evento', error.message);
+      });
   }
 
   return (
@@ -46,6 +105,25 @@ export function AddEvent({ navigation }: any) {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
+          {pets.length > 1 && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Selecionar Pet *</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typesScroll}>
+                {pets.map((pet) => (
+                  <TouchableOpacity
+                    key={pet.id}
+                    onPress={() => setSelectedPetId(pet.id)}
+                    style={[styles.typeChip, selectedPetId === pet.id && styles.typeChipActive]}
+                  >
+                    <Text style={[styles.typeChipText, selectedPetId === pet.id && styles.typeChipTextActive]}>
+                      🐾 {pet.nome}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Nome do Evento *</Text>
             <TextInput
@@ -125,19 +203,19 @@ export function AddEvent({ navigation }: any) {
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard', { token })} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('PetList')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('PetList', { token })} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Pets</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('EventList')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('EventList', { token })} style={styles.bottomTab}>
           <View style={[styles.tabIconCircle, styles.tabIconActive]} />
           <Text style={[styles.tabLabel, styles.tabLabelActive]}>Histórico</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile', { token })} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Perfil</Text>
         </TouchableOpacity>
@@ -297,3 +375,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
+export default AddEvent;
