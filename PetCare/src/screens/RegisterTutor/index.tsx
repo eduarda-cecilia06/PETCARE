@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { apiFetch } from '../../services/api';
 
 export function RegisterTutor({ navigation }: any) {
   const [nome, setNome] = useState('');
@@ -8,21 +9,34 @@ export function RegisterTutor({ navigation }: any) {
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
 
-  function handleRegister() {
-    if (!nome.trim() || !email.trim() || !senha.trim()) {
-      Alert.alert('Atenção', 'Por favor, preencha todos os campos obrigatórios.');
-      return;
-    }
-
-    if (senha !== confirmarSenha) {
-      Alert.alert('Atenção', 'As senhas não coincidem.');
-      return;
-    }
-
-    Alert.alert('Sucesso', 'Conta criada com sucesso!', [
-      { text: 'Entrar', onPress: () => navigation?.navigate('Dashboard') },
-    ]);
+function handleRegister() {
+  if (!nome.trim() || !email.trim() || !senha.trim()) {
+    Alert.alert('Atenção', 'Por favor, preencha todos os campos obrigatórios.');
+    return;
   }
+
+  if (senha !== confirmarSenha) {
+    Alert.alert('Atenção', 'As senhas não coincidem.');
+    return;
+  }
+
+  apiFetch('/api/usuarios', {
+    method: 'POST',
+    body: JSON.stringify({
+      nome: nome,
+      email: email,
+      senha: senha,
+    }),
+  })
+    .then(() => {
+      Alert.alert('Sucesso', 'Conta criada com sucesso!', [
+        { text: 'Entrar', onPress: () => navigation?.navigate('Login') },
+      ]);
+    })
+    .catch((error) => {
+      Alert.alert('Erro no Cadastro', error.message);
+    });
+}
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
@@ -41,7 +55,7 @@ export function RegisterTutor({ navigation }: any) {
             <TextInput
               value={nome}
               onChangeText={setNome}
-              placeholder="Ex: Mariana Silva"
+              placeholder="Escreva seu nome completo"
               placeholderTextColor="#9ca3af"
               style={styles.input}
             />
@@ -52,7 +66,7 @@ export function RegisterTutor({ navigation }: any) {
             <TextInput
               value={email}
               onChangeText={setEmail}
-              placeholder="seu@email.com"
+              placeholder="Digite seu e-mail"
               placeholderTextColor="#9ca3af"
               keyboardType="email-address"
               autoCapitalize="none"

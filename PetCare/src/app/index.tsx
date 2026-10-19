@@ -12,22 +12,28 @@ import { EventList } from '../screens/EventList';
 
 export default function Index() {
   const [currentScreen, setCurrentScreen] = useState('Login');
+  const [params, setParams] = useState<any>({});
 
   const fakeNavigation = {
-    navigate: (screenName: string) => setCurrentScreen(screenName),
+    navigate: (screenName: string, newParams?: any) => {
+      setParams((prev: any) => ({ ...prev, ...newParams }));
+      setCurrentScreen(screenName);
+    },
     goBack: () => setCurrentScreen('Dashboard'),
   };
+
+  const route = { params };
 
   return (
     <View style={styles.container}>
       {currentScreen === 'Login' && <Login navigation={fakeNavigation} />}
       {currentScreen === 'RegisterTutor' && <RegisterTutor navigation={fakeNavigation} />}
-      {currentScreen === 'TutorProfile' && <TutorProfile navigation={fakeNavigation} />}
-      {currentScreen === 'Dashboard' && <Dashboard navigation={fakeNavigation} />}
-      {currentScreen === 'PetForm' && <PetForm navigation={fakeNavigation} />}
-      {currentScreen === 'PetList' && <PetList navigation={fakeNavigation} />}
-      {currentScreen === 'EventList' && <EventList navigation={fakeNavigation} />}
-      {currentScreen === 'AddEvent' && <AddEvent navigation={fakeNavigation} />}
+      {currentScreen === 'TutorProfile' && <TutorProfile navigation={fakeNavigation} route={route} />}
+      {currentScreen === 'Dashboard' && <Dashboard navigation={fakeNavigation} route={route} />}
+      {currentScreen === 'PetForm' && <PetForm navigation={fakeNavigation} route={route} />}
+      {currentScreen === 'PetList' && <PetList navigation={fakeNavigation} route={route} />}
+      {currentScreen === 'EventList' && <EventList navigation={fakeNavigation} route={route} />}
+      {currentScreen === 'AddEvent' && <AddEvent navigation={fakeNavigation} route={route} />}
     </View>
   );
 }

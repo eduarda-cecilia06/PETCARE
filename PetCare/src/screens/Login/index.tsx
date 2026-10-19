@@ -1,13 +1,34 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { apiFetch } from '../../services/api';
 
 export function Login({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
 
   function handleLogin() {
-    navigation?.navigate('Dashboard');
+    if (!email.trim() || !senha.trim()) {
+      Alert.alert('Atenção', 'Por favor, preencha o e-mail e a senha.');
+      return;
+    }
+
+    // aqui onde que tá fazendo a requisição da api 
+    apiFetch('/api/usuarios/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: email,
+        senha: senha,
+      }),
+    })
+      .then((data) => {
+        const token = data.access_token;
+        // Navega para a Dashboard passando o token retornado pelo banco
+        navigation?.navigate('Dashboard', { token });
+      })
+      .catch((error) => {
+        Alert.alert('Erro ao Entrar', error.message);
+      });
   }
 
   return (
@@ -183,3 +204,5 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
   },
 });
+
+export default Login;

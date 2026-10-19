@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import { apiFetch } from '../../services/api';
 
-export function PetForm({ navigation }: any) {
+export function PetForm({ route, navigation }: any) {
   const [nome, setNome] = useState('');
-  const [especie, setEspecie] = useState('Cão');
+  const [especie, setEspecie] = useState('');
   const [raca, setRaca] = useState('');
   const [dataNasc, setDataNasc] = useState('');
   const [idade, setIdade] = useState('');
@@ -26,22 +27,63 @@ export function PetForm({ navigation }: any) {
     return `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4, 8)}`;
   }
 
+  // mudança de data para enviar ao backend de forma que seja aceito
+  function converterDataParaISO(dataBR: string) {
+    const partes = dataBR.split('/');
+    if (partes.length === 3) {
+      return `${partes[2]}-${partes[1]}-${partes[0]}`;
+    }
+    return null;
+  }
+
+    function calcularIdadeCompleta(dataBR: string) {
+    if (dataBR.length !== 10) return '';
+    const [dia, mes, ano] = dataBR.split('/').map(Number);
+    const hoje = new Date();
+    const nascimento = new Date(ano, mes - 1, dia);
+
+    if (isNaN(nascimento.getTime()) || nascimento > hoje) return '';
+
+    let anos = hoje.getFullYear() - nascimento.getFullYear();
+    let meses = hoje.getMonth() - nascimento.getMonth();
+    let dias = hoje.getDate() - nascimento.getDate();
+
+    if (dias < 0) {
+      meses--;
+      const ultimoDiaMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), 0).getDate();
+      dias += ultimoDiaMesAnterior;
+    }
+    if (meses < 0) {
+      anos--;
+      meses += 12;
+    }
+
+    if (anos > 0) {
+      return `${anos} ano${anos > 1 ? 's' : ''} e ${meses} mes${meses !== 1 ? 'es' : ''}`;
+    } else if (meses > 0) {
+      return `${meses} mes${meses > 1 ? 'es' : ''} e ${dias} dia${dias !== 1 ? 's' : ''}`;
+    } else if (dias >= 7) {
+      const semanas = Math.floor(dias / 7);
+      const diasRestantes = dias % 7;
+      return `${semanas} sem${semanas > 1 ? 's' : ''} ${diasRestantes > 0 ? `e ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}` : ''}`;
+    } else {
+      return `${dias} dia${dias !== 1 ? 's' : ''}`;
+    }
+  }
+
   function handleDataChange(texto: string) {
     const dataFormatada = formatarData(texto);
     setDataNasc(dataFormatada);
 
     if (dataFormatada.length === 10) {
-      const partes = dataFormatada.split('/');
-      const anoNasc = parseInt(partes[2], 10);
-      const anoAtual = new Date().getFullYear();
-      const calculoIdade = anoAtual - anoNasc;
-
-      if (calculoIdade >= 0 && calculoIdade < 50) {
-        setIdade(String(calculoIdade));
-      }
+      setIdade(calcularIdadeCompleta(dataFormatada));
+    } else {
+      setIdade('');
     }
   }
 
+
+  //meio autoexplicativo, aqui vai ter a opção de tirar foto ou escolher na galeria, e vai salvar a uri da fotinha no estado
   async function handleTirarFoto() {
     Alert.alert(
       'Foto do Pet',
@@ -88,7 +130,7 @@ export function PetForm({ navigation }: any) {
           },
         },
         { text: 'Cancelar', style: 'cancel' },
-      ]
+      ]  
     );
   }
 
@@ -97,9 +139,33 @@ export function PetForm({ navigation }: any) {
       Alert.alert('Atenção', 'Por favor, informe o nome do pet.');
       return;
     }
-    Alert.alert('Sucesso', 'Pet salvo com sucesso!', [
-      { text: 'OK', onPress: () => navigation?.goBack() },
-    ]);
+
+    //pro servidor n ficar perguntando td hora quem é e confirmando e senha e tal
+    const token = route?.params?.token;
+
+    apiFetch('/api/pets', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        nome: nome,
+        especie: especie,
+        raca: raca || null,
+        data_nascimento: dataNasc ? converterDataParaISO(dataNasc) : null,
+        genero: genero,
+        peso: peso ? parseFloat(peso) : null,
+        foto: fotoUri || null,
+      }),
+    })
+      .then(() => {
+        Alert.alert('Sucesso', 'Pet salvo com sucesso!', [
+          { text: 'OK', onPress: () => navigation?.goBack() },
+        ]);
+      })
+      .catch((error) => {
+        Alert.alert('Erro ao Salvar Pet', error.message);
+      });
   }
 
   return (
@@ -145,7 +211,7 @@ export function PetForm({ navigation }: any) {
             <TextInput
               value={especie}
               onChangeText={setEspecie}
-              placeholder="Ex: Cão, Gato, Passarinho, Furão..."
+              placeholder="Escreva a espécie do seu pet"
               placeholderTextColor="#9ca3af"
               style={styles.input}
             />
@@ -156,7 +222,7 @@ export function PetForm({ navigation }: any) {
             <TextInput
               value={raca}
               onChangeText={setRaca}
-              placeholder="Ex: SRD ou Poodle"
+              placeholder="Escreva a raça do seu pet"
               placeholderTextColor="#9ca3af"
               style={styles.input}
             />

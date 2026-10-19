@@ -1,17 +1,84 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { apiFetch } from '../../services/api';
 
-export function EventList({ navigation }: any) {
+export function EventList({ route, navigation }: any) {
+  const token = route?.params?.token;
   const [eventos, setEventos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filtroAtivo, setFiltroAtivo] = useState('Todos');
 
   const filtros = ['Todos', 'Vacina', 'Consulta', 'Medicamento', 'Exame'];
 
+  useEffect(() => {
+    carregarEventos();
+  }, []);
+
+  async function carregarEventos() {
+    setLoading(true);
+    try {
+      // aqui ele vai  buscar os pet cadastrados do usuário 
+      const pets = await apiFetch('/api/pets', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!Array.isArray(pets)) {
+        setEventos([]);
+        return;
+      }
+
+      // pra cada pet, busca seus eventos e adiciona o nome do pet no objeto
+      let todosEventos: any[] = [];
+      for (const pet of pets) {
+        try {
+          const eventosPet = await apiFetch(`/api/pets/${pet.id}/eventos`, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          if (Array.isArray(eventosPet)) {
+            const formatados = eventosPet.map((ev: any) => ({
+              ...ev,
+              petName: pet.nome,
+            }));
+            todosEventos = [...todosEventos, ...formatados];
+          }
+        } catch (err) {
+          // err é interressante, ele ignora de eventos de pet que falharam, mas funciona os outros
+        }
+      }
+      
+      const hoje = new Date().setHours(0,0,0,0);
+      
+      todosEventos.sort((a, b) => {
+        const dataA = new Date(a.data).getTime();
+        const dataB = new Date(b.data).getTime();
+        return Math.abs(dataA - hoje) - Math.abs(dataB - hoje);
+      });
+      
+      setEventos(todosEventos);
+    } catch (error: any) {
+      Alert.alert('Erro', error.message || 'Não foi possível carregar os eventos.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // aqui ele filtra os eventos com base no chip ativo
+  const eventosFiltrados = eventos.filter((item) => {
+    if (filtroAtivo === 'Todos') return true;
+    return item.tipo?.toLowerCase() === filtroAtivo.toLowerCase();
+  });
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.headerNav}>
-        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard')} style={styles.backButton}>
+        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard', { token })} style={styles.backButton}>
           <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Histórico de Cuidados</Text>
@@ -22,11 +89,11 @@ export function EventList({ navigation }: any) {
         <View style={styles.topActionRow}>
           <View>
             <Text style={styles.title}>Registros e Eventos</Text>
-            <Text style={styles.subtitle}>{eventos.length} lançamentos registrados</Text>
+            <Text style={styles.subtitle}>{eventosFiltrados.length} lançamentos encontrados</Text>
           </View>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => navigation?.navigate('AddEvent')}
+            onPress={() => navigation?.navigate('AddEvent', { token })}
             style={styles.addButtonHeader}
           >
             <Text style={styles.addButtonHeaderText}>+ Evento</Text>
@@ -47,7 +114,9 @@ export function EventList({ navigation }: any) {
           ))}
         </ScrollView>
 
-        {eventos.length === 0 ? (
+        {loading ? (
+          <ActivityIndicator size="large" color="#16a34a" style={{ marginTop: 40 }} />
+        ) : eventosFiltrados.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyTitle}>Nenhum evento registrado</Text>
             <Text style={styles.emptySubtitle}>
@@ -55,16 +124,18 @@ export function EventList({ navigation }: any) {
             </Text>
           </View>
         ) : (
-          eventos.map((item) => (
+          eventosFiltrados.map((item) => (
             <View key={item.id} style={styles.eventCard}>
               <View style={styles.eventInfo}>
                 <View style={styles.eventHeaderRow}>
                   <Text style={styles.petName}>{item.petName || 'Pet'}</Text>
-                  <Text style={styles.eventDate}>{item.data || ''}</Text>
+                  <Text style={styles.eventDate}>
+                    {item.data ? new Date(item.data).toLocaleDateString('pt-BR') : ''}
+                  </Text>
                 </View>
                 <Text style={styles.eventTitle}>{item.nome || ''}</Text>
                 {Boolean(item.custo) && (
-                  <Text style={styles.eventCost}>Valor: R$ {item.custo}</Text>
+                  <Text style={styles.eventCost}>Valor: R$ {Number(item.custo).toFixed(2)}</Text>
                 )}
               </View>
               <View style={styles.typeBadge}>
@@ -76,19 +147,19 @@ export function EventList({ navigation }: any) {
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard', { token })} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('PetList')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('PetList', { token })} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Pets</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('EventList')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('EventList', { token })} style={styles.bottomTab}>
           <View style={[styles.tabIconCircle, styles.tabIconActive]} />
           <Text style={[styles.tabLabel, styles.tabLabelActive]}>Histórico</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile')} style={styles.bottomTab}>
+        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile', { token })} style={styles.bottomTab}>
           <View style={styles.tabIconCircle} />
           <Text style={styles.tabLabel}>Perfil</Text>
         </TouchableOpacity>
