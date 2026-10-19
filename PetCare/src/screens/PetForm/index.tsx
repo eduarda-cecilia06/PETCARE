@@ -6,7 +6,7 @@ import { apiFetch } from '../../services/api';
 
 export function PetForm({ route, navigation }: any) {
   const [nome, setNome] = useState('');
-  const [especie, setEspecie] = useState('Cão');
+  const [especie, setEspecie] = useState('');
   const [raca, setRaca] = useState('');
   const [dataNasc, setDataNasc] = useState('');
   const [idade, setIdade] = useState('');
@@ -36,19 +36,49 @@ export function PetForm({ route, navigation }: any) {
     return null;
   }
 
+    function calcularIdadeCompleta(dataBR: string) {
+    if (dataBR.length !== 10) return '';
+    const [dia, mes, ano] = dataBR.split('/').map(Number);
+    const hoje = new Date();
+    const nascimento = new Date(ano, mes - 1, dia);
+
+    if (isNaN(nascimento.getTime()) || nascimento > hoje) return '';
+
+    let anos = hoje.getFullYear() - nascimento.getFullYear();
+    let meses = hoje.getMonth() - nascimento.getMonth();
+    let dias = hoje.getDate() - nascimento.getDate();
+
+    if (dias < 0) {
+      meses--;
+      const ultimoDiaMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), 0).getDate();
+      dias += ultimoDiaMesAnterior;
+    }
+    if (meses < 0) {
+      anos--;
+      meses += 12;
+    }
+
+    if (anos > 0) {
+      return `${anos} ano${anos > 1 ? 's' : ''} e ${meses} mes${meses !== 1 ? 'es' : ''}`;
+    } else if (meses > 0) {
+      return `${meses} mes${meses > 1 ? 'es' : ''} e ${dias} dia${dias !== 1 ? 's' : ''}`;
+    } else if (dias >= 7) {
+      const semanas = Math.floor(dias / 7);
+      const diasRestantes = dias % 7;
+      return `${semanas} sem${semanas > 1 ? 's' : ''} ${diasRestantes > 0 ? `e ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}` : ''}`;
+    } else {
+      return `${dias} dia${dias !== 1 ? 's' : ''}`;
+    }
+  }
+
   function handleDataChange(texto: string) {
     const dataFormatada = formatarData(texto);
     setDataNasc(dataFormatada);
 
     if (dataFormatada.length === 10) {
-      const partes = dataFormatada.split('/');
-      const anoNasc = parseInt(partes[2], 10);
-      const anoAtual = new Date().getFullYear();
-      const calculoIdade = anoAtual - anoNasc;
-
-      if (calculoIdade >= 0 && calculoIdade < 50) {
-        setIdade(String(calculoIdade));
-      }
+      setIdade(calcularIdadeCompleta(dataFormatada));
+    } else {
+      setIdade('');
     }
   }
 
