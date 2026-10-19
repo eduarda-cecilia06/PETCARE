@@ -2,12 +2,13 @@ export const API_BASE_URL = 'http://192.168.255.104:8000';
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   try {
+    const { headers, ...rest } = options;
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...rest,
       headers: {
         'Content-Type': 'application/json',
-        ...options.headers,
+        ...headers,
       },
-      ...options,
     });
 
     const data = await response.json().catch(() => null);
