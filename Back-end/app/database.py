@@ -7,14 +7,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
-# Força o SQLAlchemy a usar o psycopg versão 3
 if SQLALCHEMY_DATABASE_URL and SQLALCHEMY_DATABASE_URL.startswith("postgresql://"):
     SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgresql://", "postgresql+psycopg://")
 
-# O Neon exige SSL, então garantimos isso na conexão
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    connect_args={"sslmode": "require"}  # Necessário para Neon
+    connect_args={"sslmode": "require"}  
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
