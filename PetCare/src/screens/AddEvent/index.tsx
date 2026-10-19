@@ -142,7 +142,7 @@ export function AddEvent({ route, navigation }: any) {
             <TextInput
               value={nome}
               onChangeText={setNome}
-              placeholder="Insira aqui o evento"
+              placeholder="Insira aqui o Evento"
               placeholderTextColor="#9ca3af"
               style={styles.input}
             />

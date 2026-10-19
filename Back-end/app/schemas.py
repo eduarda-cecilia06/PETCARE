@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr
 from datetime import datetime, date
 from typing import Optional, List
 
-# --- Usuário ---
+# Usuário
 class UsuarioCreate(BaseModel):
     nome: str
     email: EmailStr
@@ -25,7 +25,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
-# --- Pet ---
+# Pet
 class PetCreate(BaseModel):
     nome: str
     especie: str
@@ -48,7 +48,7 @@ class PetResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# --- Evento ---
+# Evento
 class EventoCreate(BaseModel):
     tipo: str
     nome: str

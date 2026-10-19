@@ -88,8 +88,8 @@ export function EventList({ route, navigation }: any) {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.topActionRow}>
           <View>
-            <Text style={styles.title}>Registros e Eventos</Text>
-            <Text style={styles.subtitle}>{eventosFiltrados.length} lançamentos encontrados</Text>
+            <Text style={styles.title}>Registros de Eventos</Text>
+            <Text style={styles.subtitle}>{eventosFiltrados.length} evento(s) encontrado(s)</Text>
           </View>
           <TouchableOpacity
             activeOpacity={0.8}

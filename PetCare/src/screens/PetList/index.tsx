@@ -44,7 +44,7 @@ export function PetList({ route, navigation }: any) {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.topActionRow}>
           <View>
-            <Text style={styles.title}>Gerencie seus companheiros</Text>
+            <Text style={styles.title}>Gerencie seus Pets</Text>
             <Text style={styles.subtitle}>{pets.length} cadastrados</Text>
           </View>
           <TouchableOpacity

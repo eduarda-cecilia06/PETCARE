@@ -1,17 +1,44 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react'; 
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { apiFetch } from '../../services/api'; 
 
 export function TutorProfile({ route, navigation }: any) {
   const token = route?.params?.token;
-  const [nome, setNome] = useState('Cliente Um');
-  const [email, setEmail] = useState('clienteum@gmail.com');
-  const [telefone, setTelefone] = useState('(13) 98765-4321');
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [telefone, setTelefone] = useState(''); 
+  
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    carregarPerfil();
+  }, []);
+
+  function carregarPerfil() {
+    setLoading(true);
+    apiFetch('/api/usuarios/me', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((data) => {
+        setNome(data.nome);
+        setEmail(data.email);
+      })
+      .catch((error) => {
+        Alert.alert('Erro', 'Não foi possível carregar o perfil.');
+        console.error(error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }
 
   function handleSalvar() {
     Alert.alert('Sucesso', 'Dados do perfil atualizados com sucesso!');
   }
-  //no momento aqui é só um alerta de exclusão, não apaga realmente o perfil no banco de dados, implementar futuramente!!!
 
   function handleExcluirConta() {
     Alert.alert(
@@ -25,6 +52,15 @@ export function TutorProfile({ route, navigation }: any) {
           onPress: () => navigation?.navigate('Login'),
         },
       ]
+    );
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#16a34a" />
+        <Text style={{ marginTop: 10, color: '#64748b', fontFamily: 'monospace' }}>Carregando perfil...</Text>
+      </SafeAreaView>
     );
   }
 
@@ -46,7 +82,7 @@ export function TutorProfile({ route, navigation }: any) {
             </Text>
           </View>
           <Text style={styles.tutorName}>{nome}</Text>
-          <Text style={styles.tutorBadge}>Tutora Cadastrada</Text>
+          <Text style={styles.tutorBadge}>Tutor Cadastrado</Text>
         </View>
 
         <View style={styles.card}>
