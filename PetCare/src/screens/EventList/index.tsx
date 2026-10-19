@@ -52,9 +52,15 @@ export function EventList({ route, navigation }: any) {
           // err é interressante, ele ignora de eventos de pet que falharam, mas funciona os outros
         }
       }
-
-      // organnizado de forma decrecente de acordo com a data, pros mais recentes aparecerem primeiro
-      todosEventos.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+      
+      const hoje = new Date().setHours(0,0,0,0);
+      
+      todosEventos.sort((a, b) => {
+        const dataA = new Date(a.data).getTime();
+        const dataB = new Date(b.data).getTime();
+        return Math.abs(dataA - hoje) - Math.abs(dataB - hoje);
+      });
+      
       setEventos(todosEventos);
     } catch (error: any) {
       Alert.alert('Erro', error.message || 'Não foi possível carregar os eventos.');

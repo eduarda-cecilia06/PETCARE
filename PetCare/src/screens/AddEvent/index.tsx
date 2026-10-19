@@ -78,7 +78,7 @@ export function AddEvent({ route, navigation }: any) {
         nome: nome,
         data: data ? converterDataParaISO(data) : new Date().toISOString(),
         descricao: obs || null,
-        custo: custo ? parseFloat(custo.replace(',', '.')) : null,
+        custo: custo ? parseFloat(custo.replace(/\./g, '').replace(',', '.')) : null,
       }),
     })
       .then(() => {
@@ -89,6 +89,19 @@ export function AddEvent({ route, navigation }: any) {
       .catch((error) => {
         Alert.alert('Erro ao Salvar Evento', error.message);
       });
+  }
+
+    function formatarMoeda(texto: string) {
+    let valor = texto.replace(/\D/g, ''); // Remove tudo que não é número
+    if (!valor) return '';
+    
+    // deixa em decimal e fixa as duas casinhas
+    valor = (Number(valor) / 100).toFixed(2) + '';
+    // troca o ponto de decimal por uma vírgula
+    valor = valor.replace('.', ',');
+    // adiciona o pontinho de milhar, mil, tal
+    valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+    return valor;
   }
 
   return (
@@ -129,7 +142,7 @@ export function AddEvent({ route, navigation }: any) {
             <TextInput
               value={nome}
               onChangeText={setNome}
-              placeholder="Ex: Vacina V10 Polivalente Anual"
+              placeholder="Insira aqui o evento"
               placeholderTextColor="#9ca3af"
               style={styles.input}
             />
@@ -170,8 +183,8 @@ export function AddEvent({ route, navigation }: any) {
               <Text style={styles.label}>Custo / Valor (R$)</Text>
               <TextInput
                 value={custo}
-                onChangeText={setCusto}
-                placeholder="Ex: 150.00"
+                onChangeText={(texto) => setCusto(formatarMoeda(texto))}
+                placeholder="Ex: 150,00"
                 placeholderTextColor="#9ca3af"
                 keyboardType="numeric"
                 style={styles.input}
