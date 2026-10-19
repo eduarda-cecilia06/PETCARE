@@ -55,7 +55,7 @@ function handleRegister() {
             <TextInput
               value={nome}
               onChangeText={setNome}
-              placeholder="Ex: Mariana Silva"
+              placeholder="Escreva seu nome completo"
               placeholderTextColor="#9ca3af"
               style={styles.input}
             />
@@ -66,7 +66,7 @@ function handleRegister() {
             <TextInput
               value={email}
               onChangeText={setEmail}
-              placeholder="seu@email.com"
+              placeholder="Digite seu e-mail"
               placeholderTextColor="#9ca3af"
               keyboardType="email-address"
               autoCapitalize="none"

@@ -11,6 +11,7 @@ export function TutorProfile({ route, navigation }: any) {
   function handleSalvar() {
     Alert.alert('Sucesso', 'Dados do perfil atualizados com sucesso!');
   }
+  //no momento aqui é só um alerta de exclusão, não apaga realmente o perfil no banco de dados, implementar futuramente!!!
 
   function handleExcluirConta() {
     Alert.alert(

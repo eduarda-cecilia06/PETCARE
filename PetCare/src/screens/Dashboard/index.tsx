@@ -99,7 +99,7 @@ export function Dashboard({ route, navigation }: any) {
           <Text style={styles.financialTitle}>Despesas Totais (Mês)</Text>
           <Text style={styles.financialValue}>R$ {totalGastos}</Text>
           <TouchableOpacity onPress={handleGerarRelatorio} style={styles.pdfButton}>
-            <Text style={styles.pdfButtonText}>📄 Exportar Relatório em PDF</Text>
+            <Text style={styles.pdfButtonText}>Exportar Relatório em PDF</Text>
           </TouchableOpacity>
         </View>
 

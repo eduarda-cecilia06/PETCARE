@@ -82,6 +82,8 @@ export function PetForm({ route, navigation }: any) {
     }
   }
 
+
+  //meio autoexplicativo, aqui vai ter a opção de tirar foto ou escolher na galeria, e vai salvar a uri da fotinha no estado
   async function handleTirarFoto() {
     Alert.alert(
       'Foto do Pet',
@@ -128,7 +130,7 @@ export function PetForm({ route, navigation }: any) {
           },
         },
         { text: 'Cancelar', style: 'cancel' },
-      ]
+      ]  
     );
   }
 
@@ -209,7 +211,7 @@ export function PetForm({ route, navigation }: any) {
             <TextInput
               value={especie}
               onChangeText={setEspecie}
-              placeholder="Ex: Cão, Gato, Passarinho, Furão..."
+              placeholder="Escreva a espécie do seu pet"
               placeholderTextColor="#9ca3af"
               style={styles.input}
             />
@@ -220,7 +222,7 @@ export function PetForm({ route, navigation }: any) {
             <TextInput
               value={raca}
               onChangeText={setRaca}
-              placeholder="Ex: SRD ou Poodle"
+              placeholder="Escreva a raça do seu pet"
               placeholderTextColor="#9ca3af"
               style={styles.input}
             />
