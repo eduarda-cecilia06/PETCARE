@@ -1,208 +1,81 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiFetch } from '../../services/api';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Screen, Field, Button } from '@/ui/components';
+import { colors } from '@/ui/theme';
+import { api } from '@/services/api';
+import { session } from '@/services/session';
 
-export function Login({ navigation }: any) {
+export function Login() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const [ver, setVer] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  function handleLogin() {
+  async function entrar() {
     if (!email.trim() || !senha.trim()) {
-      Alert.alert('Atenção', 'Por favor, preencha o e-mail e a senha.');
+      Alert.alert('Atenção', 'Preencha o e-mail e a senha.');
       return;
     }
-
-    // aqui onde que tá fazendo a requisição da api 
-    apiFetch('/api/usuarios/login', {
-      method: 'POST',
-      body: JSON.stringify({
-        email: email,
-        senha: senha,
-      }),
-    })
-      .then((data) => {
-        const token = data.access_token;
-        // Navega para a Dashboard passando o token retornado pelo banco
-        navigation?.navigate('Dashboard', { token });
-      })
-      .catch((error) => {
-        Alert.alert('Erro ao Entrar', error.message);
-      });
+    setLoading(true);
+    try {
+      const data = await api.post('/api/usuarios/login', { email: email.trim(), senha });
+      session.setToken(data.access_token);
+      try {
+        session.setUsuario(await api.get('/api/usuarios/me'));
+      } catch {}
+      router.replace('/dashboard');
+    } catch (e: any) {
+      Alert.alert('Erro ao entrar', e.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View style={styles.logoBadge}>
-            <Text style={styles.logoText}>PetCare</Text>
-          </View>
-          <Text style={styles.title}>Bem-vindo de volta!</Text>
-          <Text style={styles.subtitle}>Acesse a rotina e saúde dos seus pets</Text>
+    <Screen center>
+      <View style={s.hero}>
+        <View style={s.logo}>
+          <Text style={{ fontSize: 44 }}>🐾</Text>
         </View>
+        <Text style={s.brand}>PetCare</Text>
+        <Text style={s.title}>Bem-vindo de volta!</Text>
+        <Text style={s.subtitle}>Acompanhe a saúde e a rotina dos seus pets</Text>
+      </View>
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>E-mail</Text>
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              placeholder="seu@email.com"
-              placeholderTextColor="#9ca3af"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              style={styles.input}
-            />
-          </View>
+      <Field label="E-mail" value={email} onChangeText={setEmail} placeholder="seu@email.com" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
+      <Field label="Senha" value={senha} onChangeText={setSenha} placeholder="••••••••" secureTextEntry={!ver} autoCapitalize="none" onSubmitEditing={entrar} />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Senha</Text>
-            <TextInput
-              value={senha}
-              onChangeText={setSenha}
-              placeholder="••••••••"
-              placeholderTextColor="#9ca3af"
-              secureTextEntry
-              style={styles.input}
-            />
-            <TouchableOpacity style={styles.forgotPasswordButton}>
-              <Text style={styles.forgotPasswordText}>Esqueceu a senha?</Text>
-            </TouchableOpacity>
-          </View>
+      <View style={s.row}>
+        <Pressable onPress={() => setVer(!ver)}>
+          <Text style={s.link}>{ver ? 'Ocultar senha' : 'Mostrar senha'}</Text>
+        </Pressable>
+        <Pressable onPress={() => router.push('/forgot-password')}>
+          <Text style={s.link}>Esqueceu a senha?</Text>
+        </Pressable>
+      </View>
 
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleLogin}
-            style={styles.primaryButton}
-          >
-            <Text style={styles.primaryButtonText}>Entrar</Text>
-          </TouchableOpacity>
+      <Button label="Entrar" onPress={entrar} loading={loading} style={{ marginTop: 18 }} />
 
-          <View style={styles.footerRow}>
-            <Text style={styles.footerText}>Não tem uma conta? </Text>
-            <TouchableOpacity onPress={() => navigation?.navigate('RegisterTutor')}>
-              <Text style={styles.linkText}>Cadastre-se</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      <View style={s.footer}>
+        <Text style={s.footerTxt}>Não tem uma conta? </Text>
+        <Pressable onPress={() => router.push('/register')}>
+          <Text style={[s.link, { fontWeight: '800' }]}>Cadastre-se</Text>
+        </Pressable>
+      </View>
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-    paddingVertical: 32,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  logoBadge: {
-    backgroundColor: '#dcfce7',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginBottom: 16,
-  },
-  logoText: {
-    color: '#16a34a',
-    fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    textAlign: 'center',
-    marginBottom: 6,
-    fontFamily: 'monospace',
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#64748b',
-    textAlign: 'center',
-    fontFamily: 'monospace',
-  },
-  form: {
-    width: '100%',
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    color: '#334155',
-    marginBottom: 8,
-    fontWeight: '600',
-    fontFamily: 'monospace',
-  },
-  input: {
-    width: '100%',
-    backgroundColor: '#ffffff',
-    height: 50,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    fontSize: 14,
-    color: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    fontFamily: 'monospace',
-  },
-  forgotPasswordButton: {
-    alignSelf: 'flex-end',
-    marginTop: 6,
-  },
-  forgotPasswordText: {
-    fontSize: 12,
-    color: '#16a34a',
-    fontFamily: 'monospace',
-  },
-  primaryButton: {
-    backgroundColor: '#22c55e',
-    height: 50,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-    elevation: 2,
-    shadowColor: '#16a34a',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 6,
-  },
-  primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 28,
-  },
-  footerText: {
-    fontSize: 13,
-    color: '#64748b',
-    fontFamily: 'monospace',
-  },
-  linkText: {
-    fontSize: 13,
-    color: '#16a34a',
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
+const s = StyleSheet.create({
+  hero: { alignItems: 'center', marginBottom: 28 },
+  logo: { width: 88, height: 88, borderRadius: 44, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.primaryBorder },
+  brand: { marginTop: 10, fontSize: 30, fontWeight: '800', color: colors.primaryDark },
+  title: { marginTop: 14, fontSize: 20, fontWeight: '700', color: colors.text },
+  subtitle: { marginTop: 4, fontSize: 13, color: colors.textSoft, textAlign: 'center' },
+  row: { flexDirection: 'row', justifyContent: 'space-between' },
+  link: { color: colors.primary, fontSize: 13, fontWeight: '600' },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 26 },
+  footerTxt: { color: colors.textSoft, fontSize: 13 },
 });
-
-export default Login;

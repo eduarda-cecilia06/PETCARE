@@ -1,358 +1,145 @@
-import React, { useState, useEffect } from 'react'; 
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiFetch } from '../../services/api'; 
+import React, { useEffect, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Screen, Card, Field, Button, Loading, SectionTitle } from '@/ui/components';
+import { colors } from '@/ui/theme';
+import { api, endpointIndisponivel } from '@/services/api';
+import { session } from '@/services/session';
+import { cancelarTodos } from '@/services/notifications';
 
-export function TutorProfile({ route, navigation }: any) {
-  const token = route?.params?.token;
+
+export function TutorProfile() {
+  const router = useRouter();
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
-  const [telefone, setTelefone] = useState(''); 
-  
   const [loading, setLoading] = useState(true);
+  const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
-    carregarPerfil();
+    api
+      .get('/api/usuarios/me')
+      .then((u) => {
+        setNome(u.nome);
+        setEmail(u.email);
+        session.setUsuario(u);
+      })
+      .catch((e) => Alert.alert('Erro', e.message))
+      .finally(() => setLoading(false));
   }, []);
 
-  function carregarPerfil() {
-    setLoading(true);
-    apiFetch('/api/usuarios/me', {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((data) => {
-        setNome(data.nome);
-        setEmail(data.email);
-      })
-      .catch((error) => {
-        Alert.alert('Erro', 'Não foi possível carregar o perfil.');
-        console.error(error);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+  async function salvar() {
+    if (!nome.trim() || !/^\S+@\S+\.\S+$/.test(email.trim())) return Alert.alert('Atenção', 'Informe um nome e um e-mail válidos.');
+    setSalvando(true);
+    try {
+      const u = await api.put('/api/usuarios/me', { nome: nome.trim(), email: email.trim() });
+      // o e-mail faz parte do token: se mudou, o servidor devolve um token novo
+      if (u?.access_token) session.setToken(u.access_token);
+      session.setUsuario({ nome: u?.nome ?? nome.trim(), email: u?.email ?? email.trim() });
+      Alert.alert('Pronto! ✅', 'Perfil atualizado com sucesso.');
+    } catch (e: any) {
+      Alert.alert('Erro ao salvar', endpointIndisponivel(e) ? 'O servidor ainda não tem o endpoint PUT /api/usuarios/me.' : e.message);
+    } finally {
+      setSalvando(false);
+    }
   }
 
-  function handleSalvar() {
-    Alert.alert('Sucesso', 'Dados do perfil atualizados com sucesso!');
-  }
-
-  function handleExcluirConta() {
-    Alert.alert(
-      'Excluir Conta',
-      'Tem certeza de que deseja excluir sua conta? Esta ação é irreversível.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: () => navigation?.navigate('Login'),
+  function sair() {
+    Alert.alert('Sair', 'Deseja sair da sua conta?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Sair',
+        onPress: async () => {
+          await cancelarTodos();
+          session.clear();
+          router.replace('/');
         },
-      ]
-    );
+      },
+    ]);
   }
 
-  if (loading) {
-    return (
-      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#16a34a" />
-        <Text style={{ marginTop: 10, color: '#64748b', fontFamily: 'monospace' }}>Carregando perfil...</Text>
-      </SafeAreaView>
-    );
+  function excluirConta() {
+    Alert.alert('Excluir conta', 'Todos os seus pets, eventos e fotos serão apagados permanentemente. Deseja continuar?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Excluir',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.del('/api/usuarios/me');
+            await cancelarTodos();
+            session.clear();
+            Alert.alert('Conta excluída', 'Sentiremos sua falta!');
+            router.replace('/');
+          } catch (e: any) {
+            Alert.alert('Erro ao excluir', endpointIndisponivel(e) ? 'O servidor ainda não tem o endpoint DELETE /api/usuarios/me.' : e.message);
+          }
+        },
+      },
+    ]);
   }
+
+  const atalhos = [
+    { e: '🔔', t: 'Notificações', p: '/notifications' },
+    { e: '📄', t: 'Relatórios em PDF', p: '/reports' },
+    { e: '💰', t: 'Gastos', p: '/expenses' },
+  ];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <View style={styles.headerNav}>
-        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard', { token })} style={styles.backButton}>
-          <Text style={styles.backButtonText}>Voltar</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Perfil do Tutor</Text>
-        <View style={{ width: 50 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarInitials}>
-              {nome ? nome.substring(0, 2).toUpperCase() : 'MS'}
-            </Text>
-          </View>
-          <Text style={styles.tutorName}>{nome}</Text>
-          <Text style={styles.tutorBadge}>Tutor Cadastrado</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Dados Pessoais</Text>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Nome Completo</Text>
-            <TextInput
-              value={nome}
-              onChangeText={setNome}
-              placeholder="Digite seu nome"
-              placeholderTextColor="#9ca3af"
-              style={styles.input}
-            />
+    <Screen nav="profile" title="Meu perfil">
+      {loading ? (
+        <Loading />
+      ) : (
+        <>
+          <View style={s.top}>
+            <View style={s.avatar}>
+              <Text style={s.initials}>{nome ? nome.trim().substring(0, 2).toUpperCase() : 'PC'}</Text>
+            </View>
+            <Text style={s.name}>{nome}</Text>
+            <Text style={s.email}>{email}</Text>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>E-mail</Text>
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              placeholder="Digite seu e-mail"
-              placeholderTextColor="#9ca3af"
-              style={styles.input}
-            />
-          </View>
+          <Card>
+            <Text style={s.cardTitle}>Dados pessoais</Text>
+            <Field label="Nome completo" value={nome} onChangeText={setNome} placeholder="Seu nome" />
+            <Field label="E-mail" value={email} onChangeText={setEmail} placeholder="seu@email.com" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
+            <Button label="Salvar alterações" onPress={salvar} loading={salvando} />
+          </Card>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Telefone</Text>
-            <TextInput
-              value={telefone}
-              onChangeText={setTelefone}
-              keyboardType="phone-pad"
-              placeholder="Digite seu telefone"
-              placeholderTextColor="#9ca3af"
-              style={styles.input}
-            />
-          </View>
+          <SectionTitle>Atalhos</SectionTitle>
+          <Card style={{ paddingVertical: 4 }}>
+            {atalhos.map((a, i) => (
+              <Pressable key={a.t} style={[s.link, i < atalhos.length - 1 && s.linkBorder]} onPress={() => router.push(a.p as any)}>
+                <Text style={{ fontSize: 20, marginRight: 12 }}>{a.e}</Text>
+                <Text style={s.linkTxt}>{a.t}</Text>
+                <Text style={s.chev}>›</Text>
+              </Pressable>
+            ))}
+          </Card>
 
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleSalvar}
-            style={styles.saveButton}
-          >
-            <Text style={styles.saveButtonText}>Salvar Alterações</Text>
-          </TouchableOpacity>
-        </View>
+          <Button label="Sair da conta" variant="outline" onPress={sair} style={{ marginBottom: 14 }} />
 
-        <View style={styles.dangerCard}>
-          <Text style={styles.dangerTitle}>Zona de Perigo</Text>
-          <Text style={styles.dangerDescription}>
-            Ao excluir sua conta, todos os registros dos seus pets e históricos serão apagados permanentemente.
-          </Text>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleExcluirConta}
-            style={styles.deleteButton}
-          >
-            <Text style={styles.deleteButtonText}>Excluir Conta</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-
-      <View style={styles.bottomBar}>
-        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard', { token })} style={styles.bottomTab}>
-          <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('PetList', { token })} style={styles.bottomTab}>
-          <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Pets</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('EventList', { token })} style={styles.bottomTab}>
-          <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Histórico</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile', { token })} style={styles.bottomTab}>
-          <View style={[styles.tabIconCircle, styles.tabIconActive]} />
-          <Text style={[styles.tabLabel, styles.tabLabelActive]}>Perfil</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+          <Card style={{ backgroundColor: colors.dangerSoft, borderColor: colors.dangerBorder }}>
+            <Text style={s.dangerTitle}>Zona de perigo</Text>
+            <Text style={s.dangerTxt}>Ao excluir sua conta, todos os registros dos seus pets e históricos serão apagados permanentemente.</Text>
+            <Button label="Excluir conta" variant="danger" onPress={excluirConta} />
+          </Card>
+        </>
+      )}
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  headerNav: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  backButton: {
-    paddingVertical: 6,
-  },
-  backButtonText: {
-    color: '#16a34a',
-    fontSize: 14,
-    fontFamily: 'monospace',
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    fontFamily: 'monospace',
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  profileHeader: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  avatarCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#dcfce7',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  avatarInitials: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#16a34a',
-    fontFamily: 'monospace',
-  },
-  tutorName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    fontFamily: 'monospace',
-  },
-  tutorBadge: {
-    fontSize: 12,
-    color: '#64748b',
-    fontFamily: 'monospace',
-    marginTop: 2,
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    marginBottom: 16,
-    fontFamily: 'monospace',
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 13,
-    color: '#334155',
-    marginBottom: 6,
-    fontWeight: '600',
-    fontFamily: 'monospace',
-  },
-  input: {
-    width: '100%',
-    backgroundColor: '#f8fafc',
-    height: 46,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    fontSize: 13,
-    color: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    fontFamily: 'monospace',
-  },
-  saveButton: {
-    backgroundColor: '#22c55e',
-    height: 46,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  saveButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
-  dangerCard: {
-    backgroundColor: '#fef2f2',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#fecaca',
-  },
-  dangerTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#dc2626',
-    marginBottom: 6,
-    fontFamily: 'monospace',
-  },
-  dangerDescription: {
-    fontSize: 12,
-    color: '#991b1b',
-    fontFamily: 'monospace',
-    marginBottom: 16,
-    lineHeight: 18,
-  },
-  deleteButton: {
-    backgroundColor: '#ef4444',
-    height: 44,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
-  bottomBar: {
-    width: '100%',
-    height: 70,
-    backgroundColor: '#ffffff',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-  },
-  bottomTab: {
-    alignItems: 'center',
-  },
-  tabIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#cbd5e1',
-    marginBottom: 4,
-  },
-  tabIconActive: {
-    backgroundColor: '#22c55e',
-  },
-  tabLabel: {
-    fontSize: 11,
-    fontFamily: 'monospace',
-    color: '#64748b',
-  },
-  tabLabelActive: {
-    color: '#16a34a',
-    fontWeight: 'bold',
-  },
+const s = StyleSheet.create({
+  top: { alignItems: 'center', marginBottom: 18 },
+  avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: colors.primarySoft, borderWidth: 2, borderColor: colors.primaryBorder, alignItems: 'center', justifyContent: 'center' },
+  initials: { fontSize: 30, fontWeight: '800', color: colors.primaryDark },
+  name: { fontSize: 20, fontWeight: '800', color: colors.text, marginTop: 10 },
+  email: { fontSize: 13, color: colors.textSoft, marginTop: 2 },
+  cardTitle: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: 14 },
+  link: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
+  linkBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  linkTxt: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
+  chev: { fontSize: 24, color: colors.muted },
+  dangerTitle: { fontSize: 15, fontWeight: '800', color: colors.danger, marginBottom: 6 },
+  dangerTxt: { fontSize: 12, color: '#991b1b', lineHeight: 18, marginBottom: 14 },
 });
-
-export default TutorProfile;

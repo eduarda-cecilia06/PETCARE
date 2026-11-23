@@ -1,392 +1,167 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiFetch } from '../../services/api';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Screen, Field, Button, Chip, ChipRow, Loading, Empty } from '@/ui/components';
+import { colors, tipoCor } from '@/ui/theme';
+import { useDados } from '@/services/useDados';
+import { api, endpointIndisponivel } from '@/services/api';
+import { agendarLembrete, cancelarLembrete } from '@/services/notifications';
+import { TIPOS_EVENTO, TIPO_LABEL, dataBRparaISO, isoParaDataBR, mascaraData, mascaraMoeda, moedaParaNumero, normalizarTipo, parseLocal, chaveDia } from '@/utils/format';
 
-export function AddEvent({ route, navigation }: any) {
-  const token = route?.params?.token;
-  const [pets, setPets] = useState<any[]>([]);
-  const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
+// UC11: Adicionar Evento • UC14: Registrar Gasto • UC15: lembrete (notificação) do evento
+export function AddEvent() {
+  const router = useRouter();
+  const { petId, eventId, foco } = useLocalSearchParams<{ petId?: string; eventId?: string; foco?: string }>();
+  const editando = !!eventId;
+  const { pets, eventos, loading } = useDados();
+  const iniciado = useRef(false);
 
+  const [pet, setPet] = useState<number | null>(petId ? Number(petId) : null);
   const [nome, setNome] = useState('');
-  const [tipo, setTipo] = useState('Vacina');
-  const [data, setData] = useState('');
+  const [tipo, setTipo] = useState<string>(foco === 'gasto' ? 'CONSULTA' : 'VACINA');
+  const [data, setData] = useState(isoParaDataBR(chaveDia(new Date())));
   const [custo, setCusto] = useState('');
+  const [proxima, setProxima] = useState('');
+  const [lembrar, setLembrar] = useState(false);
   const [obs, setObs] = useState('');
-
-  const tiposEvento = ['Vacina', 'Consulta', 'Vermífugo', 'Medicamento', 'Exame', 'Cirurgia'];
+  const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
-    carregarPetsDoTutor();
-  }, []);
+    if (loading || iniciado.current) return;
+    iniciado.current = true;
+    if (editando) {
+      const e = eventos.find((x) => String(x.id) === String(eventId));
+      if (!e) return;
+      setPet(e.pet_id);
+      setNome(e.nome);
+      setTipo(normalizarTipo(e.tipo));
+      setData(isoParaDataBR(e.data));
+      setCusto(e.custo ? mascaraMoeda(Number(e.custo).toFixed(2)) : '');
+      setProxima(isoParaDataBR(e.proxima_dose));
+      setLembrar(!!e.notificacao_ativa);
+      setObs(e.descricao || '');
+    } else if (!pet && pets.length > 0) {
+      setPet(pets[0].id);
+    }
+  }, [loading, editando, eventId, eventos, pets, pet]);
 
-  function carregarPetsDoTutor() {
-    apiFetch('/api/pets', {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((dataPets) => {
-        if (Array.isArray(dataPets) && dataPets.length > 0) {
-          setPets(dataPets);
-          setSelectedPetId(dataPets[0].id);
-        }
-      })
-      .catch(() => {
-        // aqui ele meio que silencia erro de carregamento prévio
-      });
+  async function salvar() {
+    if (!pet) return Alert.alert('Atenção', 'Cadastre um pet antes de registrar eventos.');
+    if (!nome.trim()) return Alert.alert('Atenção', 'Informe o nome do evento.');
+    const dataISO = dataBRparaISO(data);
+    if (!dataISO) return Alert.alert('Atenção', 'Data inválida. Use dd/mm/aaaa.');
+    let proxISO: string | null = null;
+    if (proxima) {
+      proxISO = dataBRparaISO(proxima);
+      if (!proxISO) return Alert.alert('Atenção', 'Data da próxima dose inválida.');
+      if (proxISO < dataISO) return Alert.alert('Atenção', 'A próxima dose deve ser depois da data do evento.');
+    }
+    if (lembrar && !proxISO) return Alert.alert('Atenção', 'Para ativar o lembrete, informe a data da próxima dose/retorno.');
+
+    const corpo = {
+      tipo,
+      nome: nome.trim(),
+      data: `${dataISO}T00:00:00`,
+      descricao: obs.trim() || null,
+      custo: moedaParaNumero(custo),
+      proxima_dose: proxISO ? `${proxISO}T00:00:00` : null,
+      notificacao_ativa: lembrar,
+    };
+
+    setSalvando(true);
+    try {
+      const resp = editando ? await api.put(`/api/eventos/${eventId}`, corpo) : await api.post(`/api/pets/${pet}/eventos`, corpo);
+      const evId: number = resp?.id ?? Number(eventId);
+      const petNome = pets.find((p) => p.id === pet)?.nome;
+
+      let aviso = '';
+      if (lembrar && proxISO && evId) {
+        const quando = parseLocal(proxISO)!;
+        const disparo = await agendarLembrete({ id: evId, titulo: corpo.nome, petNome, quando });
+        aviso = disparo ? `\n🔔 Lembrete agendado para ${disparo.toLocaleDateString('pt-BR')}.` : '\n⚠️ Não foi possível agendar o lembrete (permissão negada ou notificações desativadas).';
+        // registra a Notificacao no servidor (se o endpoint existir) — sem bloquear o fluxo
+        if (disparo) api.post('/api/notificacoes', { mensagem: `${corpo.nome}${petNome ? ' - ' + petNome : ''}`, data_agendada: disparo.toISOString(), evento_id: evId }).catch(() => {});
+      } else if (evId) {
+        await cancelarLembrete(evId);
+      }
+
+      Alert.alert('Pronto! ✅', (editando ? 'Evento atualizado.' : 'Evento registrado!') + aviso, [{ text: 'OK', onPress: () => router.back() }]);
+    } catch (e: any) {
+      Alert.alert('Erro ao salvar evento', endpointIndisponivel(e) ? 'O servidor ainda não tem este endpoint (edição de evento).' : e.message);
+    } finally {
+      setSalvando(false);
+    }
   }
 
-  function formatarData(texto: string) {
-    const apenasNumeros = texto.replace(/\D/g, '');
-    if (apenasNumeros.length <= 2) {
-      return apenasNumeros;
-    }
-    if (apenasNumeros.length <= 4) {
-      return `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2)}`;
-    }
-    return `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4, 8)}`;
+  const titulo = editando ? 'Editar evento' : foco === 'gasto' ? 'Registrar gasto' : 'Novo evento';
+
+  if (loading) {
+    return (
+      <Screen title={titulo} back>
+        <Loading />
+      </Screen>
+    );
   }
 
-  function converterDataParaISO(dataBR: string) {
-    const partes = dataBR.split('/');
-    if (partes.length === 3) {
-      return `${partes[2]}-${partes[1]}-${partes[0]}T00:00:00`;
-    }
-    return new Date().toISOString();
-  }
-
-  function handleSalvarEvento() {
-    if (!nome.trim()) {
-      Alert.alert('Atenção', 'Por favor, informe o nome do evento.');
-      return;
-    }
-
-    if (!selectedPetId) {
-      Alert.alert('Atenção', 'Você precisa ter pelo menos um pet cadastrado para adicionar um evento.');
-      return;
-    }
-
-    apiFetch(`/api/pets/${selectedPetId}/eventos`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        tipo: tipo,
-        nome: nome,
-        data: data ? converterDataParaISO(data) : new Date().toISOString(),
-        descricao: obs || null,
-        custo: custo ? parseFloat(custo.replace(/\./g, '').replace(',', '.')) : null,
-      }),
-    })
-      .then(() => {
-        Alert.alert('Sucesso', 'Evento cadastrado com sucesso!', [
-          { text: 'OK', onPress: () => navigation?.goBack() },
-        ]);
-      })
-      .catch((error) => {
-        Alert.alert('Erro ao Salvar Evento', error.message);
-      });
-  }
-
-    function formatarMoeda(texto: string) {
-    let valor = texto.replace(/\D/g, ''); // Remove tudo que não é número
-    if (!valor) return '';
-    
-    // deixa em decimal e fixa as duas casinhas
-    valor = (Number(valor) / 100).toFixed(2) + '';
-    // troca o ponto de decimal por uma vírgula
-    valor = valor.replace('.', ',');
-    // adiciona o pontinho de milhar, mil, tal
-    valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
-    return valor;
+  if (pets.length === 0) {
+    return (
+      <Screen title={titulo} back>
+        <Empty emoji="🐾" title="Cadastre um pet primeiro" text="Os eventos ficam vinculados a um pet." action={<Button label="Cadastrar pet" onPress={() => router.replace('/pet-form')} />} />
+      </Screen>
+    );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <View style={styles.headerNav}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>Cancelar</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Novo Evento</Text>
-        <TouchableOpacity onPress={handleSalvarEvento} style={styles.saveHeaderButton}>
-          <Text style={styles.saveHeaderButtonText}>Salvar</Text>
-        </TouchableOpacity>
+    <Screen title={titulo} back>
+      <Text style={s.label}>Pet *</Text>
+      <View style={{ marginBottom: 14 }}>
+        <ChipRow>
+          {pets.map((p) => (
+            <Chip key={p.id} label={`🐾 ${p.nome}`} active={pet === p.id} onPress={() => !editando && setPet(p.id)} />
+          ))}
+        </ChipRow>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.card}>
-          {pets.length > 1 && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Selecionar Pet *</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typesScroll}>
-                {pets.map((pet) => (
-                  <TouchableOpacity
-                    key={pet.id}
-                    onPress={() => setSelectedPetId(pet.id)}
-                    style={[styles.typeChip, selectedPetId === pet.id && styles.typeChipActive]}
-                  >
-                    <Text style={[styles.typeChipText, selectedPetId === pet.id && styles.typeChipTextActive]}>
-                      🐾 {pet.nome}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+      <Field label="Nome do evento *" value={nome} onChangeText={setNome} placeholder="Ex.: Vacina antirrábica" />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Nome do Evento *</Text>
-            <TextInput
-              value={nome}
-              onChangeText={setNome}
-              placeholder="Insira aqui o Evento"
-              placeholderTextColor="#9ca3af"
-              style={styles.input}
-            />
-          </View>
+      <Text style={s.label}>Tipo</Text>
+      <View style={{ marginBottom: 14 }}>
+        <ChipRow>
+          {TIPOS_EVENTO.map((t) => (
+            <Chip key={t} label={`${tipoCor[t].emoji} ${TIPO_LABEL[t]}`} active={tipo === t} onPress={() => setTipo(t)} />
+          ))}
+        </ChipRow>
+      </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Tipo de Evento</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typesScroll}>
-              {tiposEvento.map((item) => (
-                <TouchableOpacity
-                  key={item}
-                  onPress={() => setTipo(item)}
-                  style={[styles.typeChip, tipo === item && styles.typeChipActive]}
-                >
-                  <Text style={[styles.typeChipText, tipo === item && styles.typeChipTextActive]}>
-                    {item}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          <View style={styles.rowInputs}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-              <Text style={styles.label}>Data</Text>
-              <TextInput
-                value={data}
-                onChangeText={(texto) => setData(formatarData(texto))}
-                placeholder="dd/mm/aaaa"
-                placeholderTextColor="#9ca3af"
-                keyboardType="numeric"
-                maxLength={10}
-                style={styles.input}
-              />
-            </View>
-
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Custo / Valor (R$)</Text>
-              <TextInput
-                value={custo}
-                onChangeText={(texto) => setCusto(formatarMoeda(texto))}
-                placeholder="Ex: 150,00"
-                placeholderTextColor="#9ca3af"
-                keyboardType="numeric"
-                style={styles.input}
-              />
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Descrição / Observações</Text>
-            <TextInput
-              value={obs}
-              onChangeText={setObs}
-              placeholder="Adicione observações ou instruções clínicas"
-              placeholderTextColor="#9ca3af"
-              multiline
-              numberOfLines={3}
-              style={[styles.input, styles.textArea]}
-            />
-          </View>
-
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleSalvarEvento}
-            style={styles.primaryButton}
-          >
-            <Text style={styles.primaryButtonText}>Criar Evento</Text>
-          </TouchableOpacity>
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        <View style={{ flex: 1 }}>
+          <Field label="Data" value={data} onChangeText={(t) => setData(mascaraData(t))} placeholder="dd/mm/aaaa" keyboardType="numeric" maxLength={10} />
         </View>
-      </ScrollView>
-
-      <View style={styles.bottomBar}>
-        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard', { token })} style={styles.bottomTab}>
-          <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('PetList', { token })} style={styles.bottomTab}>
-          <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Pets</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('EventList', { token })} style={styles.bottomTab}>
-          <View style={[styles.tabIconCircle, styles.tabIconActive]} />
-          <Text style={[styles.tabLabel, styles.tabLabelActive]}>Histórico</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile', { token })} style={styles.bottomTab}>
-          <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Perfil</Text>
-        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Field label="Gasto (R$)" value={custo} onChangeText={(t) => setCusto(mascaraMoeda(t))} placeholder="0,00" keyboardType="numeric" />
+        </View>
       </View>
-    </SafeAreaView>
+
+      <Field label="Próxima dose / retorno" value={proxima} onChangeText={(t) => setProxima(mascaraData(t))} placeholder="dd/mm/aaaa (opcional)" keyboardType="numeric" maxLength={10} />
+
+      <View style={s.switchRow}>
+        <View style={{ flex: 1, paddingRight: 12 }}>
+          <Text style={s.switchTitle}>🔔 Lembrar-me</Text>
+          <Text style={s.switchSub}>Envia uma notificação antes da próxima dose</Text>
+        </View>
+        <Switch value={lembrar} onValueChange={setLembrar} trackColor={{ true: colors.primaryBorder, false: colors.border }} thumbColor={lembrar ? colors.primary : '#f4f4f5'} />
+      </View>
+
+      <Field label="Observações" value={obs} onChangeText={setObs} placeholder="Instruções do veterinário, lote da vacina..." multiline />
+
+      <Button label={editando ? 'Salvar alterações' : 'Salvar evento'} onPress={salvar} loading={salvando} />
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  headerNav: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  backButton: {
-    paddingVertical: 6,
-  },
-  backButtonText: {
-    color: '#64748b',
-    fontSize: 14,
-    fontFamily: 'monospace',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    fontFamily: 'monospace',
-  },
-  saveHeaderButton: {
-    paddingVertical: 6,
-  },
-  saveHeaderButtonText: {
-    color: '#16a34a',
-    fontSize: 14,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 13,
-    color: '#334155',
-    marginBottom: 6,
-    fontWeight: '600',
-    fontFamily: 'monospace',
-  },
-  input: {
-    width: '100%',
-    backgroundColor: '#f8fafc',
-    height: 46,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    fontSize: 13,
-    color: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    fontFamily: 'monospace',
-  },
-  textArea: {
-    height: 80,
-    paddingTop: 12,
-    textAlignVertical: 'top',
-  },
-  typesScroll: {
-    flexDirection: 'row',
-  },
-  typeChip: {
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  typeChipActive: {
-    backgroundColor: '#dcfce7',
-    borderColor: '#86efac',
-  },
-  typeChipText: {
-    fontSize: 12,
-    color: '#64748b',
-    fontFamily: 'monospace',
-  },
-  typeChipTextActive: {
-    color: '#16a34a',
-    fontWeight: 'bold',
-  },
-  rowInputs: {
-    flexDirection: 'row',
-  },
-  primaryButton: {
-    backgroundColor: '#16a34a',
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
-  bottomBar: {
-    width: '100%',
-    height: 70,
-    backgroundColor: '#ffffff',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-  },
-  bottomTab: {
-    alignItems: 'center',
-  },
-  tabIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#cbd5e1',
-    marginBottom: 4,
-  },
-  tabIconActive: {
-    backgroundColor: '#22c55e',
-  },
-  tabLabel: {
-    fontSize: 11,
-    fontFamily: 'monospace',
-    color: '#64748b',
-  },
-  tabLabelActive: {
-    color: '#16a34a',
-    fontWeight: 'bold',
-  },
+const s = StyleSheet.create({
+  label: { fontSize: 13, fontWeight: '600', color: colors.textSoft, marginBottom: 6 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 14 },
+  switchTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
+  switchSub: { fontSize: 12, color: colors.muted, marginTop: 2 },
 });
-
-export default AddEvent;

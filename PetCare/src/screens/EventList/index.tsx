@@ -1,375 +1,124 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiFetch } from '../../services/api';
+import React, { useMemo, useState } from 'react';
+import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Screen, Card, Button, Chip, ChipRow, Empty, Loading, ErrorBox, Badge } from '@/ui/components';
+import { colors, tipoCor } from '@/ui/theme';
+import { useDados } from '@/services/useDados';
+import { api, endpointIndisponivel } from '@/services/api';
+import { cancelarLembrete } from '@/services/notifications';
+import type { Evento } from '@/services/types';
+import { TIPOS_EVENTO, TIPO_LABEL, formatarReal, isoParaDataBR, normalizarTipo } from '@/utils/format';
 
-export function EventList({ route, navigation }: any) {
-  const token = route?.params?.token;
-  const [eventos, setEventos] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filtroAtivo, setFiltroAtivo] = useState('Todos');
 
-  const filtros = ['Todos', 'Vacina', 'Consulta', 'Medicamento', 'Exame'];
+export function EventList() {
+  const router = useRouter();
+  const { pets, eventos, loading, erro, recarregar } = useDados();
+  const [tipo, setTipo] = useState<string>('TODOS');
+  const [petId, setPetId] = useState<number | null>(null);
+  const [busca, setBusca] = useState('');
 
-  useEffect(() => {
-    carregarEventos();
-  }, []);
+  const filtrados = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    return eventos
+      .filter((e) => (tipo === 'TODOS' ? true : normalizarTipo(e.tipo) === tipo))
+      .filter((e) => (petId ? e.pet_id === petId : true))
+      .filter((e) => (q ? `${e.nome} ${e.petNome} ${e.descricao || ''}`.toLowerCase().includes(q) : true))
+      .sort((a, b) => (a.data < b.data ? 1 : -1));
+  }, [eventos, tipo, petId, busca]);
 
-  async function carregarEventos() {
-    setLoading(true);
-    try {
-      // aqui ele vai  buscar os pet cadastrados do usuário 
-      const pets = await apiFetch('/api/pets', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  const total = filtrados.reduce((a, e) => a + Number(e.custo || 0), 0);
 
-      if (!Array.isArray(pets)) {
-        setEventos([]);
-        return;
-      }
-
-      // pra cada pet, busca seus eventos e adiciona o nome do pet no objeto
-      let todosEventos: any[] = [];
-      for (const pet of pets) {
-        try {
-          const eventosPet = await apiFetch(`/api/pets/${pet.id}/eventos`, {
-            method: 'GET',
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-          if (Array.isArray(eventosPet)) {
-            const formatados = eventosPet.map((ev: any) => ({
-              ...ev,
-              petName: pet.nome,
-            }));
-            todosEventos = [...todosEventos, ...formatados];
+  function excluir(e: Evento) {
+    Alert.alert('Excluir evento', `Excluir "${e.nome}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Excluir',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.del(`/api/eventos/${e.id}`);
+            await cancelarLembrete(e.id);
+            recarregar();
+          } catch (err: any) {
+            Alert.alert('Erro ao excluir', endpointIndisponivel(err) ? 'O servidor ainda não tem o endpoint DELETE /api/eventos/{id}.' : err.message);
           }
-        } catch (err) {
-          // err é interressante, ele ignora de eventos de pet que falharam, mas funciona os outros
-        }
-      }
-      
-      const hoje = new Date().setHours(0,0,0,0);
-      
-      todosEventos.sort((a, b) => {
-        const dataA = new Date(a.data).getTime();
-        const dataB = new Date(b.data).getTime();
-        return Math.abs(dataA - hoje) - Math.abs(dataB - hoje);
-      });
-      
-      setEventos(todosEventos);
-    } catch (error: any) {
-      Alert.alert('Erro', error.message || 'Não foi possível carregar os eventos.');
-    } finally {
-      setLoading(false);
-    }
+        },
+      },
+    ]);
   }
 
-  // aqui ele filtra os eventos com base no chip ativo
-  const eventosFiltrados = eventos.filter((item) => {
-    if (filtroAtivo === 'Todos') return true;
-    return item.tipo?.toLowerCase() === filtroAtivo.toLowerCase();
-  });
-
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <View style={styles.headerNav}>
-        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard', { token })} style={styles.backButton}>
-          <Text style={styles.backButtonText}>Voltar</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Histórico de Cuidados</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <Screen nav="events" title="Histórico" subtitle={loading ? '' : `${filtrados.length} evento(s) • ${formatarReal(total)}`} right={<Button label="+ Evento" small onPress={() => router.push('/add-event')} />}>
+      {erro ? <ErrorBox message={erro} onRetry={recarregar} /> : null}
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.topActionRow}>
-          <View>
-            <Text style={styles.title}>Registros de Eventos</Text>
-            <Text style={styles.subtitle}>{eventosFiltrados.length} evento(s) encontrado(s)</Text>
-          </View>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => navigation?.navigate('AddEvent', { token })}
-            style={styles.addButtonHeader}
-          >
-            <Text style={styles.addButtonHeaderText}>+ Evento</Text>
-          </TouchableOpacity>
-        </View>
+      <TextInput value={busca} onChangeText={setBusca} placeholder="🔎  Buscar por nome, pet ou observação" placeholderTextColor={colors.muted} style={s.search} />
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-          {filtros.map((filtro) => (
-            <TouchableOpacity
-              key={filtro}
-              onPress={() => setFiltroAtivo(filtro)}
-              style={[styles.filterChip, filtroAtivo === filtro && styles.filterChipActive]}
-            >
-              <Text style={[styles.filterChipText, filtroAtivo === filtro && styles.filterChipTextActive]}>
-                {filtro}
-              </Text>
-            </TouchableOpacity>
+      <View style={{ marginBottom: 8 }}>
+        <ChipRow>
+          <Chip label="Todos" active={tipo === 'TODOS'} onPress={() => setTipo('TODOS')} />
+          {TIPOS_EVENTO.map((t) => (
+            <Chip key={t} label={`${tipoCor[t].emoji} ${TIPO_LABEL[t]}`} active={tipo === t} onPress={() => setTipo(t)} />
           ))}
-        </ScrollView>
-
-        {loading ? (
-          <ActivityIndicator size="large" color="#16a34a" style={{ marginTop: 40 }} />
-        ) : eventosFiltrados.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyTitle}>Nenhum evento registrado</Text>
-            <Text style={styles.emptySubtitle}>
-              Toque no botão "+ Evento" para adicionar consultas, vacinas, exames e medicamentos.
-            </Text>
-          </View>
-        ) : (
-          eventosFiltrados.map((item) => (
-            <View key={item.id} style={styles.eventCard}>
-              <View style={styles.eventInfo}>
-                <View style={styles.eventHeaderRow}>
-                  <Text style={styles.petName}>{item.petName || 'Pet'}</Text>
-                  <Text style={styles.eventDate}>
-                    {item.data ? new Date(item.data).toLocaleDateString('pt-BR') : ''}
-                  </Text>
-                </View>
-                <Text style={styles.eventTitle}>{item.nome || ''}</Text>
-                {Boolean(item.custo) && (
-                  <Text style={styles.eventCost}>Valor: R$ {Number(item.custo).toFixed(2)}</Text>
-                )}
-              </View>
-              <View style={styles.typeBadge}>
-                <Text style={styles.typeBadgeText}>{item.tipo || 'Geral'}</Text>
-              </View>
-            </View>
-          ))
-        )}
-      </ScrollView>
-
-      <View style={styles.bottomBar}>
-        <TouchableOpacity onPress={() => navigation?.navigate('Dashboard', { token })} style={styles.bottomTab}>
-          <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('PetList', { token })} style={styles.bottomTab}>
-          <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Pets</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('EventList', { token })} style={styles.bottomTab}>
-          <View style={[styles.tabIconCircle, styles.tabIconActive]} />
-          <Text style={[styles.tabLabel, styles.tabLabelActive]}>Histórico</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile', { token })} style={styles.bottomTab}>
-          <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Perfil</Text>
-        </TouchableOpacity>
+        </ChipRow>
       </View>
-    </SafeAreaView>
+
+      {pets.length > 1 ? (
+        <View style={{ marginBottom: 14 }}>
+          <ChipRow>
+            <Chip label="Todos os pets" active={petId === null} onPress={() => setPetId(null)} />
+            {pets.map((p) => (
+              <Chip key={p.id} label={`🐾 ${p.nome}`} active={petId === p.id} onPress={() => setPetId(p.id)} />
+            ))}
+          </ChipRow>
+        </View>
+      ) : null}
+
+      {loading ? (
+        <Loading text="Carregando histórico..." />
+      ) : filtrados.length === 0 && !erro ? (
+        <Empty emoji="📋" title="Nenhum evento encontrado" text={eventos.length ? 'Tente mudar os filtros.' : 'Toque em "+ Evento" para registrar vacinas, consultas, exames e medicamentos.'} />
+      ) : (
+        filtrados.map((e) => {
+          const t = normalizarTipo(e.tipo);
+          const cor = tipoCor[t] || tipoCor.CONSULTA;
+          return (
+            <Card key={e.id} style={{ padding: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={[s.icon, { backgroundColor: cor.bg }]}>
+                  <Text style={{ fontSize: 20 }}>{cor.emoji}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.title}>{e.nome}</Text>
+                  <Text style={s.sub}>🐾 {e.petNome || 'Pet'} • {isoParaDataBR(e.data)}</Text>
+                </View>
+                <Badge label={TIPO_LABEL[t] || e.tipo} bg={cor.bg} fg={cor.fg} />
+              </View>
+
+              {e.descricao ? <Text style={s.desc}>{e.descricao}</Text> : null}
+              <View style={s.meta}>
+                {Number(e.custo) > 0 ? <Text style={s.metaTxt}>💰 {formatarReal(e.custo)}</Text> : null}
+                {e.proxima_dose ? <Text style={s.metaTxt}>⏭ Próxima: {isoParaDataBR(e.proxima_dose)}</Text> : null}
+                {e.notificacao_ativa ? <Text style={s.metaTxt}>🔔 Lembrete</Text> : null}
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                <Button label="Editar" small variant="soft" style={{ flex: 1 }} onPress={() => router.push({ pathname: '/add-event', params: { eventId: String(e.id) } } as any)} />
+                <Button label="Excluir" small variant="outline" style={{ flex: 1, borderColor: colors.dangerBorder }} onPress={() => excluir(e)} />
+              </View>
+            </Card>
+          );
+        })
+      )}
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  headerNav: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  backButton: {
-    paddingVertical: 6,
-  },
-  backButtonText: {
-    color: '#16a34a',
-    fontSize: 14,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    fontFamily: 'monospace',
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  topActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    fontFamily: 'monospace',
-  },
-  subtitle: {
-    fontSize: 12,
-    color: '#64748b',
-    fontFamily: 'monospace',
-    marginTop: 2,
-  },
-  addButtonHeader: {
-    backgroundColor: '#dcfce7',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#86efac',
-  },
-  addButtonHeaderText: {
-    color: '#16a34a',
-    fontSize: 12,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
-  filterScroll: {
-    marginBottom: 20,
-  },
-  filterChip: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  filterChipActive: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
-  },
-  filterChipText: {
-    fontSize: 12,
-    color: '#64748b',
-    fontFamily: 'monospace',
-  },
-  filterChipTextActive: {
-    color: '#ffffff',
-    fontWeight: 'bold',
-  },
-  emptyContainer: {
-    padding: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginTop: 10,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    fontFamily: 'monospace',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 12,
-    color: '#64748b',
-    fontFamily: 'monospace',
-    textAlign: 'center',
-  },
-  eventCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  eventInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  eventHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  petName: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#16a34a',
-    fontFamily: 'monospace',
-  },
-  eventDate: {
-    fontSize: 11,
-    color: '#64748b',
-    fontFamily: 'monospace',
-  },
-  eventTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    fontFamily: 'monospace',
-  },
-  eventCost: {
-    fontSize: 12,
-    color: '#334155',
-    fontFamily: 'monospace',
-    marginTop: 4,
-  },
-  typeBadge: {
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  typeBadgeText: {
-    fontSize: 11,
-    color: '#475569',
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
-  bottomBar: {
-    width: '100%',
-    height: 70,
-    backgroundColor: '#ffffff',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-  },
-  bottomTab: {
-    alignItems: 'center',
-  },
-  tabIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#cbd5e1',
-    marginBottom: 4,
-  },
-  tabIconActive: {
-    backgroundColor: '#22c55e',
-  },
-  tabLabel: {
-    fontSize: 11,
-    fontFamily: 'monospace',
-    color: '#64748b',
-  },
-  tabLabelActive: {
-    color: '#16a34a',
-    fontWeight: 'bold',
-  },
+const s = StyleSheet.create({
+  search: { height: 46, backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, marginBottom: 12, color: colors.text, fontSize: 14 },
+  icon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  title: { fontSize: 15, fontWeight: '700', color: colors.text },
+  sub: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  desc: { fontSize: 13, color: colors.textSoft, marginTop: 10, lineHeight: 18 },
+  meta: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
+  metaTxt: { fontSize: 12, color: colors.textSoft, fontWeight: '600' },
 });
-
-export default EventList;

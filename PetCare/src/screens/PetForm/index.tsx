@@ -1,337 +1,150 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
-import { apiFetch } from '../../services/api';
+import React, { useEffect, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Screen, Field, Button, Chip, ChipRow, Loading, PetAvatar } from '@/ui/components';
+import { colors } from '@/ui/theme';
+import { api } from '@/services/api';
+import { escolherFoto } from '@/services/photos';
+import type { Pet } from '@/services/types';
+import { ESPECIES_PET, ESPECIE_LABEL, ESPECIE_EMOJI, calcularIdade, dataBRparaISO, isoParaDataBR, mascaraData, normalizarEspecie } from '@/utils/format';
 
-export function PetForm({ route, navigation }: any) {
+
+export function PetForm() {
+  const router = useRouter();
+  const { petId } = useLocalSearchParams<{ petId?: string }>();
+  const editando = !!petId;
+
+  const [carregando, setCarregando] = useState(editando);
+  const [salvando, setSalvando] = useState(false);
   const [nome, setNome] = useState('');
-  const [especie, setEspecie] = useState('');
+  const [especie, setEspecie] = useState<string>('CACHORRO');
   const [raca, setRaca] = useState('');
-  const [dataNasc, setDataNasc] = useState('');
-  const [idade, setIdade] = useState('');
   const [genero, setGenero] = useState('Macho');
+  const [nasc, setNasc] = useState('');
   const [peso, setPeso] = useState('');
-  const [fotoUri, setFotoUri] = useState<string | null>(null);
+  const [foto, setFoto] = useState<string | null>(null);
 
-  const especies = ['Cão', 'Gato', 'Ave', 'Coelho', 'Outro'];
+  useEffect(() => {
+    if (!editando) return;
+    api
+      .get('/api/pets')
+      .then((lista: Pet[]) => {
+        const p = lista.find((x) => String(x.id) === String(petId));
+        if (!p) {
+          Alert.alert('Erro', 'Pet não encontrado.');
+          router.back();
+          return;
+        }
+        setNome(p.nome);
+        setEspecie(normalizarEspecie(p.especie));
+        setRaca(p.raca || '');
+        setGenero(p.genero || 'Macho');
+        setNasc(isoParaDataBR(p.data_nascimento));
+        setPeso(p.peso != null ? String(p.peso).replace('.', ',') : '');
+        setFoto(p.foto || null);
+      })
+      .catch((e) => Alert.alert('Erro', e.message))
+      .finally(() => setCarregando(false));
+  }, [editando, petId, router]);
 
-  function formatarData(texto: string) {
-    const apenasNumeros = texto.replace(/\D/g, '');
-    if (apenasNumeros.length <= 2) {
-      return apenasNumeros;
-    }
-    if (apenasNumeros.length <= 4) {
-      return `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2)}`;
-    }
-    return `${apenasNumeros.slice(0, 2)}/${apenasNumeros.slice(2, 4)}/${apenasNumeros.slice(4, 8)}`;
+  async function tirarFoto() {
+    const uri = await escolherFoto(true);
+    if (uri) setFoto(uri);
   }
 
-  // mudança de data para enviar ao backend de forma que seja aceito
-  function converterDataParaISO(dataBR: string) {
-    const partes = dataBR.split('/');
-    if (partes.length === 3) {
-      return `${partes[2]}-${partes[1]}-${partes[0]}`;
+  async function salvar() {
+    if (!nome.trim()) return Alert.alert('Atenção', 'Informe o nome do pet.');
+    let nascISO: string | null = null;
+    if (nasc) {
+      nascISO = dataBRparaISO(nasc);
+      if (!nascISO) return Alert.alert('Atenção', 'Data de nascimento inválida. Use dd/mm/aaaa.');
+      if (new Date(nascISO) > new Date()) return Alert.alert('Atenção', 'A data de nascimento não pode ser no futuro.');
     }
-    return null;
-  }
+    const pesoNum = peso ? parseFloat(peso.replace(',', '.')) : null;
+    if (peso && (pesoNum === null || isNaN(pesoNum))) return Alert.alert('Atenção', 'Peso inválido.');
 
-    function calcularIdadeCompleta(dataBR: string) {
-    if (dataBR.length !== 10) return '';
-    const [dia, mes, ano] = dataBR.split('/').map(Number);
-    const hoje = new Date();
-    const nascimento = new Date(ano, mes - 1, dia);
+    const corpo = {
+      nome: nome.trim(),
+      especie,
+      raca: raca.trim() || null,
+      data_nascimento: nascISO,
+      genero,
+      peso: pesoNum,
+      foto,
+    };
 
-    if (isNaN(nascimento.getTime()) || nascimento > hoje) return '';
-
-    let anos = hoje.getFullYear() - nascimento.getFullYear();
-    let meses = hoje.getMonth() - nascimento.getMonth();
-    let dias = hoje.getDate() - nascimento.getDate();
-
-    if (dias < 0) {
-      meses--;
-      const ultimoDiaMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), 0).getDate();
-      dias += ultimoDiaMesAnterior;
-    }
-    if (meses < 0) {
-      anos--;
-      meses += 12;
-    }
-
-    if (anos > 0) {
-      return `${anos} ano${anos > 1 ? 's' : ''} e ${meses} mes${meses !== 1 ? 'es' : ''}`;
-    } else if (meses > 0) {
-      return `${meses} mes${meses > 1 ? 'es' : ''} e ${dias} dia${dias !== 1 ? 's' : ''}`;
-    } else if (dias >= 7) {
-      const semanas = Math.floor(dias / 7);
-      const diasRestantes = dias % 7;
-      return `${semanas} sem${semanas > 1 ? 's' : ''} ${diasRestantes > 0 ? `e ${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}` : ''}`;
-    } else {
-      return `${dias} dia${dias !== 1 ? 's' : ''}`;
-    }
-  }
-
-  function handleDataChange(texto: string) {
-    const dataFormatada = formatarData(texto);
-    setDataNasc(dataFormatada);
-
-    if (dataFormatada.length === 10) {
-      setIdade(calcularIdadeCompleta(dataFormatada));
-    } else {
-      setIdade('');
+    setSalvando(true);
+    try {
+      if (editando) await api.put(`/api/pets/${petId}`, corpo);
+      else await api.post('/api/pets', corpo);
+      Alert.alert('Pronto! 🐾', editando ? 'Dados do pet atualizados.' : 'Pet cadastrado com sucesso!', [{ text: 'OK', onPress: () => router.back() }]);
+    } catch (e: any) {
+      Alert.alert('Erro ao salvar pet', e.message);
+    } finally {
+      setSalvando(false);
     }
   }
 
-
-  //meio autoexplicativo, aqui vai ter a opção de tirar foto ou escolher na galeria, e vai salvar a uri da fotinha no estado
-  async function handleTirarFoto() {
-    Alert.alert(
-      'Foto do Pet',
-      'Escolha como deseja adicionar a foto:',
-      [
-        {
-          text: 'Tirar com a Câmara',
-          onPress: async () => {
-            const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-            if (!permissionResult.granted) {
-              Alert.alert('Permissão negada', 'Precisamos de permissão para aceder à câmara.');
-              return;
-            }
-            const result = await ImagePicker.launchCameraAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: true,
-              aspect: [1, 1],
-              quality: 0.8,
-            });
-
-            if (!result.canceled && result.assets && result.assets.length > 0) {
-              setFotoUri(result.assets[0].uri);
-            }
-          },
-        },
-        {
-          text: 'Escolher da Galeria',
-          onPress: async () => {
-            const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (!permissionResult.granted) {
-              Alert.alert('Permissão negada', 'Precisamos de permissão para aceder à galeria.');
-              return;
-            }
-            const result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: true,
-              aspect: [1, 1],
-              quality: 0.8,
-            });
-
-            if (!result.canceled && result.assets && result.assets.length > 0) {
-              setFotoUri(result.assets[0].uri);
-            }
-          },
-        },
-        { text: 'Cancelar', style: 'cancel' },
-      ]  
+  if (carregando) {
+    return (
+      <Screen title="Editar pet" back>
+        <Loading />
+      </Screen>
     );
   }
 
-  function handleSalvar() {
-    if (!nome.trim()) {
-      Alert.alert('Atenção', 'Por favor, informe o nome do pet.');
-      return;
-    }
-
-    //pro servidor n ficar perguntando td hora quem é e confirmando e senha e tal
-    const token = route?.params?.token;
-
-    apiFetch('/api/pets', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        nome: nome,
-        especie: especie,
-        raca: raca || null,
-        data_nascimento: dataNasc ? converterDataParaISO(dataNasc) : null,
-        genero: genero,
-        peso: peso ? parseFloat(peso) : null,
-        foto: fotoUri || null,
-      }),
-    })
-      .then(() => {
-        Alert.alert('Sucesso', 'Pet salvo com sucesso!', [
-          { text: 'OK', onPress: () => navigation?.goBack() },
-        ]);
-      })
-      .catch((error) => {
-        Alert.alert('Erro ao Salvar Pet', error.message);
-      });
-  }
-
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <View style={styles.headerNav}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>Cancelar</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Novo Companheiro</Text>
-        <TouchableOpacity onPress={handleSalvar} style={styles.saveHeaderButton}>
-          <Text style={styles.saveHeaderButtonText}>Salvar</Text>
-        </TouchableOpacity>
+    <Screen title={editando ? 'Editar pet' : 'Novo pet'} back>
+      <View style={s.photoBox}>
+        <Pressable onPress={tirarFoto}>
+          <PetAvatar pet={{ nome, especie, foto }} size={104} />
+          <View style={s.camBadge}>
+            <Text style={{ fontSize: 16 }}>📷</Text>
+          </View>
+        </Pressable>
+        <Pressable onPress={tirarFoto}>
+          <Text style={s.photoLink}>{foto ? 'Trocar foto' : 'Tirar ou escolher foto'}</Text>
+        </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.photoContainer}>
-          <TouchableOpacity activeOpacity={0.8} onPress={handleTirarFoto} style={styles.photoCircle}>
-            {fotoUri ? (
-              <Image source={{ uri: fotoUri }} style={styles.photoPreview} />
-            ) : (
-              <Text style={styles.photoCircleText}>Foto</Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleTirarFoto}>
-            <Text style={styles.photoLabelText}>Tirar ou escolher foto da galeria</Text>
-          </TouchableOpacity>
+      <Field label="Nome do pet *" value={nome} onChangeText={setNome} placeholder="Ex.: Thor" />
+
+      <Text style={s.label}>Espécie *</Text>
+      <View style={{ marginBottom: 14 }}>
+        <ChipRow>
+          {ESPECIES_PET.map((e) => (
+            <Chip key={e} label={`${ESPECIE_EMOJI[e]} ${ESPECIE_LABEL[e]}`} active={especie === e} onPress={() => setEspecie(e)} />
+          ))}
+        </ChipRow>
+      </View>
+
+      <Field label="Raça" value={raca} onChangeText={setRaca} placeholder="Ex.: Labrador (opcional)" />
+
+      <Text style={s.label}>Gênero</Text>
+      <View style={s.row}>
+        {['Macho', 'Fêmea'].map((g) => (
+          <Chip key={g} label={g === 'Macho' ? '♂ Macho' : '♀ Fêmea'} active={genero === g} onPress={() => setGenero(g)} />
+        ))}
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: 12, marginTop: 14 }}>
+        <View style={{ flex: 1.3 }}>
+          <Field label="Nascimento" value={nasc} onChangeText={(t) => setNasc(mascaraData(t))} placeholder="dd/mm/aaaa" keyboardType="numeric" maxLength={10} hint={nasc.length === 10 && dataBRparaISO(nasc) ? calcularIdade(dataBRparaISO(nasc)) : undefined} />
         </View>
-
-        <View style={styles.card}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Nome do Pet *</Text>
-            <TextInput
-              value={nome}
-              onChangeText={setNome}
-              placeholder="Escreva o nome do seu pet"
-              placeholderTextColor="#9ca3af"
-              style={styles.input}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Espécie *</Text>
-            <TextInput
-              value={especie}
-              onChangeText={setEspecie}
-              placeholder="Escreva a espécie do seu pet"
-              placeholderTextColor="#9ca3af"
-              style={styles.input}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Raça</Text>
-            <TextInput
-              value={raca}
-              onChangeText={setRaca}
-              placeholder="Escreva a raça do seu pet"
-              placeholderTextColor="#9ca3af"
-              style={styles.input}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Gênero</Text>
-            <View style={styles.rowButtons}>
-              <TouchableOpacity
-                onPress={() => setGenero('Macho')}
-                style={[styles.genderButton, genero === 'Macho' && styles.genderButtonActive]}
-              >
-                <Text style={[styles.genderButtonText, genero === 'Macho' && styles.genderButtonTextActive]}>
-                  Macho
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setGenero('Fêmea')}
-                style={[styles.genderButton, genero === 'Fêmea' && styles.genderButtonActive]}
-              >
-                <Text style={[styles.genderButtonText, genero === 'Fêmea' && styles.genderButtonTextActive]}>
-                  Fêmea
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.rowInputs}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-              <Text style={styles.label}>Nascimento</Text>
-              <TextInput
-                value={dataNasc}
-                onChangeText={handleDataChange}
-                placeholder="dd/mm/aaaa"
-                placeholderTextColor="#9ca3af"
-                keyboardType="numeric"
-                maxLength={10}
-                style={styles.input}
-              />
-            </View>
-
-            <View style={[styles.inputGroup, { width: 90, marginRight: 8 }]}>
-              <Text style={styles.label}>Idade</Text>
-              <TextInput
-                value={idade}
-                onChangeText={setIdade}
-                placeholder="0"
-                placeholderTextColor="#9ca3af"
-                keyboardType="numeric"
-                maxLength={2}
-                style={styles.input}
-              />
-            </View>
-
-            <View style={[styles.inputGroup, { width: 100 }]}>
-              <Text style={styles.label}>Peso (kg)</Text>
-              <TextInput
-                value={peso}
-                onChangeText={setPeso}
-                placeholder="Ex: 12.5"
-                placeholderTextColor="#9ca3af"
-                keyboardType="numeric"
-                style={styles.input}
-              />
-            </View>
-          </View>
-
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleSalvar}
-            style={styles.primaryButton}
-          >
-            <Text style={styles.primaryButtonText}>Salvar Pet</Text>
-          </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Field label="Peso (kg)" value={peso} onChangeText={setPeso} placeholder="Ex.: 12,5" keyboardType="decimal-pad" />
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+
+      <Button label={editando ? 'Salvar alterações' : 'Cadastrar pet'} onPress={salvar} loading={salvando} style={{ marginTop: 6 }} />
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  headerNav: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-  backButton: { paddingVertical: 6 },
-  backButtonText: { color: '#64748b', fontSize: 14, fontFamily: 'monospace' },
-  headerTitle: { fontSize: 16, fontWeight: 'bold', color: '#0f172a', fontFamily: 'monospace' },
-  saveHeaderButton: { paddingVertical: 6 },
-  saveHeaderButtonText: { color: '#16a34a', fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace' },
-  scrollContent: { paddingHorizontal: 20, paddingVertical: 20 },
-  photoContainer: { alignItems: 'center', marginBottom: 20 },
-  photoCircle: { width: 90, height: 90, borderRadius: 45, backgroundColor: '#dcfce7', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#86efac', borderStyle: 'dashed', marginBottom: 8, overflow: 'hidden' },
-  photoPreview: { width: '100%', height: '100%' },
-  photoCircleText: { fontSize: 14, fontWeight: 'bold', color: '#16a34a', fontFamily: 'monospace' },
-  photoLabelText: { fontSize: 12, color: '#16a34a', fontWeight: 'bold', fontFamily: 'monospace' },
-  card: { backgroundColor: '#ffffff', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 20 },
-  inputGroup: { marginBottom: 16 },
-  label: { fontSize: 13, color: '#334155', marginBottom: 6, fontWeight: '600', fontFamily: 'monospace' },
-  input: { width: '100%', backgroundColor: '#f8fafc', height: 46, borderRadius: 12, paddingHorizontal: 14, fontSize: 13, color: '#0f172a', borderWidth: 1, borderColor: '#e2e8f0', fontFamily: 'monospace' },
-  speciesScroll: { flexDirection: 'row' },
-  speciesChip: { backgroundColor: '#f1f5f9', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, marginRight: 8, borderWidth: 1, borderColor: '#e2e8f0' },
-  speciesChipActive: { backgroundColor: '#dcfce7', borderColor: '#86efac' },
-  speciesChipText: { fontSize: 12, color: '#64748b', fontFamily: 'monospace' },
-  speciesChipTextActive: { color: '#16a34a', fontWeight: 'bold' },
-  rowButtons: { flexDirection: 'row', gap: 10 },
-  genderButton: { flex: 1, backgroundColor: '#f1f5f9', height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0' },
-  genderButtonActive: { backgroundColor: '#dcfce7', borderColor: '#86efac' },
-  genderButtonText: { fontSize: 12, color: '#64748b', fontFamily: 'monospace' },
-  genderButtonTextActive: { color: '#16a34a', fontWeight: 'bold' },
-  rowInputs: { flexDirection: 'row' },
-  primaryButton: { backgroundColor: '#16a34a', height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 8 },
-  primaryButtonText: { color: '#ffffff', fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace' },
+const s = StyleSheet.create({
+  photoBox: { alignItems: 'center', marginBottom: 20 },
+  camBadge: { position: 'absolute', right: -2, bottom: -2, width: 34, height: 34, borderRadius: 17, backgroundColor: '#fff', borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  photoLink: { marginTop: 10, color: colors.primary, fontWeight: '700', fontSize: 13 },
+  label: { fontSize: 13, fontWeight: '600', color: colors.textSoft, marginBottom: 6 },
+  row: { flexDirection: 'row' },
 });

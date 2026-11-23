@@ -1,4 +1,4 @@
-export const API_BASE_URL = 'http://192.168.255.104:8000';
+export const API_BASE_URL = 'http://10.66.88.157:8000';
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   try {

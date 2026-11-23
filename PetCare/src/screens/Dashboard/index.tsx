@@ -1,179 +1,135 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { apiFetch } from '../../services/api';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Screen, Card, Stat, SectionTitle, Empty, Loading, ErrorBox, Badge, PetAvatar } from '@/ui/components';
+import { colors, tipoCor } from '@/ui/theme';
+import { useDados } from '@/services/useDados';
+import { session } from '@/services/session';
+import { api } from '@/services/api';
+import { TIPO_LABEL, formatarReal, isoParaDataBR, normalizarTipo, parseLocal } from '@/utils/format';
 
-export function Dashboard({ route, navigation }: any) {
-  const token = route?.params?.token;
-  const [totalPets, setTotalPets] = useState(0);
-  const [totalEventos, setTotalEventos] = useState(0);
-  const [totalGastos, setTotalGastos] = useState('0.00');
+
+export function Dashboard() {
+  const router = useRouter();
+  const { pets, eventos, loading, erro, recarregar } = useDados();
+  const [nome, setNome] = useState(session.getUsuario()?.nome || '');
 
   useEffect(() => {
-    carregarDadosPainel();
-  }, []);
-
-  function carregarDadosPainel() {
-    // vai buscar os pets do usuário logado
-    apiFetch('/api/pets', {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then(async (pets) => {
-        setTotalPets(pets.length || 0);
-
-        // isso aqui é opcional, se quiser puxar eventos de cada pet para somar custos e total
-        let eventosTotais = 0;
-        let gastosTotais = 0;
-
-        for (const pet of pets) {
-          try {
-            const eventos = await apiFetch(`/api/pets/${pet.id}/eventos`, {
-              method: 'GET',
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            });
-            if (Array.isArray(eventos)) {
-              eventosTotais += eventos.length;
-              eventos.forEach((ev: any) => {
-                if (ev.custo) {
-                  gastosTotais += parseFloat(ev.custo);
-                }
-              });
-            }
-          } catch (e) {
-            // Ignora falhas pontuais de eventos por pet
-          }
-        }
-
-        setTotalEventos(eventosTotais);
-        setTotalGastos(gastosTotais.toFixed(2));
+    if (nome) return;
+    api
+      .get('/api/usuarios/me')
+      .then((u) => {
+        session.setUsuario(u);
+        setNome(u.nome);
       })
-      .catch((error) => {
-        Alert.alert('Aviso', 'Não foi possível sincronizar os dados do painel.');
-      });
-  }
+      .catch(() => {});
+  }, [nome]);
 
-  function handleGerarRelatorio() {
-    Alert.alert('Relatório PDF', 'Relatório de saúde e despesas gerado com sucesso!');
-  }
+  const { totalGasto, gastoMes, proximos } = useMemo(() => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    let total = 0;
+    let mes = 0;
+    const futuros: { id: string; titulo: string; pet: string; data: Date; tipo: string; lembrete: boolean }[] = [];
+
+    eventos.forEach((e) => {
+      const c = Number(e.custo || 0);
+      total += c;
+      const d = parseLocal(e.data);
+      if (d && d.getMonth() === hoje.getMonth() && d.getFullYear() === hoje.getFullYear()) mes += c;
+      if (d && d >= hoje) futuros.push({ id: `e${e.id}`, titulo: e.nome, pet: e.petNome || '', data: d, tipo: normalizarTipo(e.tipo), lembrete: false });
+      const pd = parseLocal(e.proxima_dose);
+      if (pd && pd >= hoje) futuros.push({ id: `p${e.id}`, titulo: `Próxima dose: ${e.nome}`, pet: e.petNome || '', data: pd, tipo: normalizarTipo(e.tipo), lembrete: true });
+    });
+    futuros.sort((a, b) => a.data.getTime() - b.data.getTime());
+    return { totalGasto: total, gastoMes: mes, proximos: futuros.slice(0, 4) };
+  }, [eventos]);
+
+  const primeiroNome = nome ? nome.split(' ')[0] : 'Tutor(a)';
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <View style={styles.headerNav}>
-        <View>
-          <Text style={styles.welcomeText}>Olá, Tutor(a)</Text>
-          <Text style={styles.headerTitle}>Painel Principal</Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => navigation?.navigate('TutorProfile', { token })}
-          style={styles.profileButton}
-        >
-          <Text style={styles.profileButtonText}>Perfil</Text>
-        </TouchableOpacity>
+    <Screen nav="home" title="PetCare" right={<Pressable onPress={() => router.push('/notifications')}><Text style={{ fontSize: 22 }}>🔔</Text></Pressable>}>
+      <Text style={s.hello}>Olá, {primeiroNome}! 👋</Text>
+      <Text style={s.helloSub}>Veja como estão os cuidados com seus pets.</Text>
+
+      {erro ? <ErrorBox message={erro} onRetry={recarregar} /> : null}
+
+      <View style={s.statsRow}>
+        <Stat value={loading ? '–' : pets.length} label="Pets" onPress={() => router.replace('/pets')} />
+        <View style={{ width: 12 }} />
+        <Stat value={loading ? '–' : eventos.length} label="Eventos" onPress={() => router.replace('/events')} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.metricsRow}>
-          <TouchableOpacity 
-            style={styles.metricCard}
-            onPress={() => navigation?.navigate('PetList', { token })}
-          >
-            <Text style={styles.metricNumber}>{totalPets}</Text>
-            <Text style={styles.metricLabel}>Pets Cadastrados</Text>
-          </TouchableOpacity>
+      <Card style={s.moneyCard} onPress={() => router.push('/expenses')}>
+        <Text style={s.moneyLabel}>Gastos do mês</Text>
+        <Text style={s.moneyValue}>{formatarReal(gastoMes)}</Text>
+        <Text style={s.moneySub}>Total acumulado: {formatarReal(totalGasto)}  ›</Text>
+      </Card>
 
-          <TouchableOpacity 
-            style={styles.metricCard}
-            onPress={() => navigation?.navigate('EventList', { token })}
-          >
-            <Text style={styles.metricNumber}>{totalEventos}</Text>
-            <Text style={styles.metricLabel}>Eventos / Cuidados</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.financialCard}>
-          <Text style={styles.financialTitle}>Despesas Totais (Mês)</Text>
-          <Text style={styles.financialValue}>R$ {totalGastos}</Text>
-          <TouchableOpacity onPress={handleGerarRelatorio} style={styles.pdfButton}>
-            <Text style={styles.pdfButtonText}>Exportar Relatório em PDF</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.sectionTitle}>Ações Rápidas</Text>
-        
-        <View style={styles.actionsGrid}>
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={() => navigation?.navigate('PetForm', { token })}
-          >
-            <Text style={styles.actionCardTitle}>+ Cadastrar Pet</Text>
-            <Text style={styles.actionCardDesc}>Adicione um novo companheiro</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={() => navigation?.navigate('AddEvent', { token })}
-          >
-            <Text style={styles.actionCardTitle}>+ Novo Evento</Text>
-            <Text style={styles.actionCardDesc}>Registe vacinas, consultas ou gastos</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-
-      <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.bottomTab}>
-          <View style={[styles.tabIconCircle, styles.tabIconActive]} />
-          <Text style={[styles.tabLabel, styles.tabLabelActive]}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('PetList', { token })} style={styles.bottomTab}>
-          <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Pets</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('EventList', { token })} style={styles.bottomTab}>
-          <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Histórico</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation?.navigate('TutorProfile', { token })} style={styles.bottomTab}>
-          <View style={styles.tabIconCircle} />
-          <Text style={styles.tabLabel}>Perfil</Text>
-        </TouchableOpacity>
+      <SectionTitle>Ações rápidas</SectionTitle>
+      <View style={s.grid}>
+        {[
+          { e: '➕', t: 'Cadastrar pet', p: '/pet-form' },
+          { e: '💉', t: 'Novo evento', p: '/add-event' },
+          { e: '📅', t: 'Calendário', p: '/calendar' },
+          { e: '💰', t: 'Gastos', p: '/expenses' },
+          { e: '📄', t: 'Relatório PDF', p: '/reports' },
+          { e: '🔔', t: 'Notificações', p: '/notifications' },
+        ].map((a) => (
+          <Pressable key={a.t} style={s.gridItem} onPress={() => router.push(a.p as any)}>
+            <Text style={{ fontSize: 26 }}>{a.e}</Text>
+            <Text style={s.gridTxt}>{a.t}</Text>
+          </Pressable>
+        ))}
       </View>
-    </SafeAreaView>
+
+      <SectionTitle action={<Pressable onPress={() => router.push('/calendar')}><Text style={s.more}>Ver agenda</Text></Pressable>}>Próximos compromissos</SectionTitle>
+      {loading ? (
+        <Loading />
+      ) : proximos.length === 0 ? (
+        <Empty emoji="🗓️" title="Nada agendado" text="Registre vacinas e consultas com a próxima data para ver os lembretes aqui." />
+      ) : (
+        proximos.map((p) => {
+          const cor = tipoCor[p.tipo] || tipoCor.CONSULTA;
+          return (
+            <Card key={p.id} style={s.nextCard}>
+              <View style={[s.nextIcon, { backgroundColor: cor.bg }]}>
+                <Text style={{ fontSize: 20 }}>{cor.emoji}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.nextTitle} numberOfLines={1}>{p.titulo}</Text>
+                <Text style={s.nextSub}>{p.pet} • {isoParaDataBR(`${p.data.getFullYear()}-${String(p.data.getMonth() + 1).padStart(2, '0')}-${String(p.data.getDate()).padStart(2, '0')}`)}</Text>
+              </View>
+              <Badge label={p.lembrete ? 'Lembrete' : TIPO_LABEL[p.tipo] || p.tipo} bg={cor.bg} fg={cor.fg} />
+            </Card>
+          );
+        })
+      )}
+
+      {!loading && pets.length === 0 ? (
+        <Card onPress={() => router.push('/pet-form')} style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center' }}>
+          <PetAvatar pet={{ especie: 'OUTRO' }} size={44} />
+          <Text style={{ flex: 1, marginLeft: 12, color: colors.textSoft, fontSize: 13 }}>Você ainda não tem pets. Toque aqui para cadastrar o primeiro!</Text>
+        </Card>
+      ) : null}
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  headerNav: { height: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-  welcomeText: { fontSize: 12, color: '#64748b', fontFamily: 'monospace' },
-  headerTitle: { fontSize: 16, fontWeight: 'bold', color: '#0f172a', fontFamily: 'monospace' },
-  profileButton: { backgroundColor: '#f1f5f9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#e2e8f0' },
-  profileButtonText: { fontSize: 12, fontWeight: 'bold', color: '#334155', fontFamily: 'monospace' },
-  scrollContent: { paddingHorizontal: 20, paddingVertical: 20 },
-  metricsRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  metricCard: { flex: 1, backgroundColor: '#ffffff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center' },
-  metricNumber: { fontSize: 24, fontWeight: 'bold', color: '#16a34a', fontFamily: 'monospace', marginBottom: 4 },
-  metricLabel: { fontSize: 11, color: '#64748b', fontFamily: 'monospace', textAlign: 'center' },
-  financialCard: { backgroundColor: '#ffffff', padding: 20, borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 24 },
-  financialTitle: { fontSize: 12, color: '#64748b', fontFamily: 'monospace', marginBottom: 4 },
-  financialValue: { fontSize: 24, fontWeight: 'bold', color: '#0f172a', fontFamily: 'monospace', marginBottom: 16 },
-  pdfButton: { backgroundColor: '#f0fdf4', paddingVertical: 10, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#86efac' },
-  pdfButtonText: { fontSize: 12, fontWeight: 'bold', color: '#16a34a', fontFamily: 'monospace' },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#0f172a', fontFamily: 'monospace', marginBottom: 12 },
-  actionsGrid: { flexDirection: 'row', gap: 12 },
-  actionCard: { flex: 1, backgroundColor: '#ffffff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0' },
-  actionCardTitle: { fontSize: 14, fontWeight: 'bold', color: '#16a34a', fontFamily: 'monospace', marginBottom: 4 },
-  actionCardDesc: { fontSize: 11, color: '#64748b', fontFamily: 'monospace' },
-  bottomBar: { width: '100%', height: 70, backgroundColor: '#ffffff', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#f1f5f9' },
-  bottomTab: { alignItems: 'center' },
-  tabIconCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#cbd5e1', marginBottom: 4 },
-  tabIconActive: { backgroundColor: '#22c55e' },
-  tabLabel: { fontSize: 11, fontFamily: 'monospace', color: '#64748b' },
-  tabLabelActive: { color: '#16a34a', fontWeight: 'bold' },
+const s = StyleSheet.create({
+  hello: { fontSize: 24, fontWeight: '800', color: colors.text },
+  helloSub: { fontSize: 13, color: colors.textSoft, marginTop: 2, marginBottom: 16 },
+  statsRow: { flexDirection: 'row', marginBottom: 2 },
+  moneyCard: { backgroundColor: colors.primary, borderColor: colors.primaryDark },
+  moneyLabel: { color: '#bbf7d0', fontSize: 12, fontWeight: '600' },
+  moneyValue: { color: '#fff', fontSize: 30, fontWeight: '800', marginVertical: 4 },
+  moneySub: { color: '#dcfce7', fontSize: 12 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  gridItem: { width: '31.5%', backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: colors.border, paddingVertical: 16, alignItems: 'center', marginBottom: 10 },
+  gridTxt: { fontSize: 12, fontWeight: '600', color: colors.textSoft, marginTop: 6, textAlign: 'center' },
+  more: { fontSize: 13, color: colors.primary, fontWeight: '700' },
+  nextCard: { flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 10 },
+  nextIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  nextTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
+  nextSub: { fontSize: 12, color: colors.muted, marginTop: 2 },
 });
-
-export default Dashboard;
