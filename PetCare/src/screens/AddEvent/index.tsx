@@ -8,7 +8,7 @@ import { api, endpointIndisponivel } from '@/services/api';
 import { agendarLembrete, cancelarLembrete } from '@/services/notifications';
 import { TIPOS_EVENTO, TIPO_LABEL, dataBRparaISO, isoParaDataBR, mascaraData, mascaraMoeda, moedaParaNumero, normalizarTipo, parseLocal, chaveDia } from '@/utils/format';
 
-// UC11: Adicionar Evento • UC14: Registrar Gasto • UC15: lembrete (notificação) do evento
+//
 export function AddEvent() {
   const router = useRouter();
   const { petId, eventId, foco } = useLocalSearchParams<{ petId?: string; eventId?: string; foco?: string }>();
@@ -45,6 +45,7 @@ export function AddEvent() {
     }
   }, [loading, editando, eventId, eventos, pets, pet]);
 
+
   async function salvar() {
     if (!pet) return Alert.alert('Atenção', 'Cadastre um pet antes de registrar eventos.');
     if (!nome.trim()) return Alert.alert('Atenção', 'Informe o nome do evento.');
@@ -78,16 +79,16 @@ export function AddEvent() {
       if (lembrar && proxISO && evId) {
         const quando = parseLocal(proxISO)!;
         const disparo = await agendarLembrete({ id: evId, titulo: corpo.nome, petNome, quando });
-        aviso = disparo ? `\n🔔 Lembrete agendado para ${disparo.toLocaleDateString('pt-BR')}.` : '\n⚠️ Não foi possível agendar o lembrete (permissão negada ou notificações desativadas).';
-        // registra a Notificacao no servidor (se o endpoint existir) — sem bloquear o fluxo
+        aviso = disparo ? `\nLembrete agendado para ${disparo.toLocaleDateString('pt-BR')}.` : '\nNão foi possível agendar o lembrete (permissão negada ou notificações desativadas).';
+        // registra a nootificacao no servidor
         if (disparo) api.post('/api/notificacoes', { mensagem: `${corpo.nome}${petNome ? ' - ' + petNome : ''}`, data_agendada: disparo.toISOString(), evento_id: evId }).catch(() => {});
       } else if (evId) {
         await cancelarLembrete(evId);
       }
 
-      Alert.alert('Pronto! ✅', (editando ? 'Evento atualizado.' : 'Evento registrado!') + aviso, [{ text: 'OK', onPress: () => router.back() }]);
+      Alert.alert('Pronto!', (editando ? 'Evento atualizado.' : 'Evento registrado!') + aviso, [{ text: 'OK', onPress: () => router.back() }]);
     } catch (e: any) {
-      Alert.alert('Erro ao salvar evento', endpointIndisponivel(e) ? 'O servidor ainda não tem este endpoint (edição de evento).' : e.message);
+      Alert.alert('Erro ao salvar evento', endpointIndisponivel(e) ?  e.message : e.message);
     } finally {
       setSalvando(false);
     }
