@@ -8,7 +8,12 @@
     "scheme": "petcare",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.petcare.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "O PetCare usa a câmera para tirar fotos dos seus pets.",
+        "NSPhotoLibraryUsageDescription": "O PetCare acessa suas fotos para você escolher a imagem do pet."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +22,14 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.petcare.app",
+      "permissions": [
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "POST_NOTIFICATIONS"
+      ],
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "output": "static",
@@ -26,16 +38,28 @@
     "plugins": [
       "expo-router",
       [
+        "expo-image-picker",
+        {
+          "cameraPermission": "O PetCare usa a câmera para tirar fotos dos seus pets.",
+          "photosPermission": "O PetCare acessa suas fotos para você escolher a imagem do pet."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#16a34a"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#16a34a",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
       "reactCompiler": true
     }
   }
